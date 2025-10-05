@@ -9,8 +9,8 @@ import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 
 export type Filters = {
   searchQuery: string;
@@ -91,7 +91,6 @@ export function DashboardPage() {
     if (file) {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
@@ -101,23 +100,28 @@ export function DashboardPage() {
           const header = json[0] as string[];
           const propMap: { [key: string]: number } = {};
           header.forEach((h, i) => {
-            const propName = h === 'F. No.' ? 'fNo' : LENS_PROPERTIES.find(p => p.toLowerCase() === h.toLowerCase());
-            if (propName) {
-              propMap[propName] = i;
-            }
+              const lowerH = h.toLowerCase();
+              if (lowerH === 'f. no.') {
+                propMap['fNo'] = i;
+              } else {
+                const propName = LENS_PROPERTIES.find(p => p.toLowerCase() === lowerH);
+                if (propName) {
+                    propMap[propName] = i;
+                }
+              }
           });
 
           const importedLenses: Omit<Lens, 'id'>[] = json.slice(1).map((row: any[]) => {
             const lensData: Partial<Omit<Lens, 'id'>> = {};
             for (const prop of LENS_PROPERTIES) {
-                const colIndex = propMap[prop];
+                const colIndex = propMap[prop as keyof typeof propMap];
                 if (colIndex !== undefined && row[colIndex] !== undefined && row[colIndex] !== null) {
                     const value = row[colIndex];
                     if (NUMERIC_PROPERTIES.includes(prop as any)) {
                         const numValue = parseFloat(String(value));
                         (lensData as any)[prop] = isNaN(numValue) ? 0 : numValue;
                     } else {
-                        (lensData as any)[prop] = value;
+                        (lensData as any)[prop] = String(value);
                     }
                 }
             }
@@ -127,7 +131,6 @@ export function DashboardPage() {
                     (lensData as any)[prop] = 0;
                 }
             }
-
             return lensData as Omit<Lens, 'id'>;
 
           }).filter(lens => lens.name && typeof lens.name === 'string');
@@ -150,23 +153,31 @@ export function DashboardPage() {
           });
           
           let addedCount = 0;
-          importedLenses.forEach(newLens => {
+          const allLensesForError = importedLenses.map(newLens => {
             const newDocRef = doc(productsCollection);
             batch.set(newDocRef, newLens);
             addedCount++;
+            return { path: newDocRef.path, data: newLens };
           });
+          
+          batch.commit()
+            .then(() => {
+                toast({ title: 'Import Complete', description: `${addedCount} lenses imported successfully.` });
+            })
+            .catch((error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: productsCollection.path,
+                    operation: 'write',
+                    requestResourceData: allLensesForError.map(l => l.data)
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Import Failed',
+                    description: 'Could not save to database due to permissions.',
+                  });
+            });
 
-          await batch.commit();
-          toast({ title: 'Import Complete', description: `${addedCount} lenses imported successfully.` });
-
-        } catch (error) {
-          console.error("Failed to import and parse file:", error);
-          toast({
-            variant: 'destructive',
-            title: 'Import Failed',
-            description: 'Could not read, parse the file, or save to database.',
-          });
-        }
       };
       reader.readAsArrayBuffer(file);
     }
