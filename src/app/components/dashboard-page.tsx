@@ -148,7 +148,6 @@ export function DashboardPage() {
             const lensData: { [key: string]: any } = {};
             const excelKeys = Object.keys(row);
 
-            // Map Excel columns (like 'F. No.') to Firestore fields (like 'fNo')
             const keyMap: {[key:string]: string} = {
               'f. no.': 'fNo',
               'fov - diagonal': 'fovD',
@@ -167,7 +166,6 @@ export function DashboardPage() {
                 const lowerKey = excelKey.toLowerCase().trim();
                 let firestoreKey = lowerKey.replace(/[^a-zA-Z0-9]/g, '');
                 
-                // Use the map for specific conversions
                 if (keyMap[lowerKey]) {
                     firestoreKey = keyMap[lowerKey];
                 }
@@ -183,7 +181,6 @@ export function DashboardPage() {
             }
 
 
-            // Ensure all properties exist, providing defaults
             LENS_PROPERTIES.forEach(prop => {
               if (lensData[prop] === undefined) {
                 lensData[prop] = NUMERIC_PROPERTIES.includes(prop) ? 0 : '';
@@ -202,35 +199,35 @@ export function DashboardPage() {
             return;
           }
           
-          try {
-            const batch = writeBatch(firestore);
+          const batch = writeBatch(firestore);
 
-            const existingDocs = await getDocs(productsCollection);
-            existingDocs.forEach(doc => {
-              batch.delete(doc.ref);
-            });
-            
-            importedLenses.forEach(newLens => {
-              const newDocRef = doc(productsCollection);
-              batch.set(newDocRef, newLens);
-            });
-            
-            await batch.commit()
-            toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
-
-          } catch (error) {
-              console.error("Import failed:", error);
-              const permissionError = new FirestorePermissionError({
-                  path: productsCollection.path,
-                  operation: 'write'
-              });
-              errorEmitter.emit('permission-error', permissionError);
-              toast({
-                  variant: 'destructive',
-                  title: 'Import Failed',
-                  description: 'Could not save to database. Check permissions.',
+          const existingDocs = await getDocs(productsCollection);
+          existingDocs.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          importedLenses.forEach(newLens => {
+            const newDocRef = doc(productsCollection);
+            batch.set(newDocRef, newLens);
+          });
+          
+          batch.commit()
+            .then(() => {
+                toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
+            })
+            .catch((error) => {
+                // Simplified error handling
+                const permissionError = new FirestorePermissionError({
+                    path: productsCollection.path,
+                    operation: 'write'
                 });
-          }
+                errorEmitter.emit('permission-error', permissionError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Import Failed',
+                    description: 'Could not save to database. Check permissions.',
+                });
+          });
       };
       reader.readAsArrayBuffer(file);
     }

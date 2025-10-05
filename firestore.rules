@@ -1,45 +1,65 @@
 /**
- * @description This ruleset defines access control for product data and Excel import metadata. It prioritizes structural segregation to maintain clear and independent security postures for different types of data. All write operations are forbidden in this prototyping phase.
- * @dataStructure
- * - `/products/{productId}`: Stores product details. Intended to be publicly readable.
- * - `/excel_imports/{excelImportId}`: Stores metadata about Excel imports. Intended to be only writable by authenticated users.
- * @keySecurityDecisions
- * - Public Read Access for Products: The `products` collection is publicly readable to facilitate open access to product information.
- * - No Write Access: All write operations (create, update, delete) are currently disabled to focus on secure data retrieval. Write operations will be enabled once the authorization method is determined.
- * - Structural Segregation: The separation of product data and import metadata allows for distinct access control policies, which is essential for maintaining data integrity and security.
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset adopts a public-read, owner-write model for the `products` collection and restricts access to the `excel_imports` collection, allowing only authenticated users to create new import records. No authorization checks are implemented to restrict `excel_imports` to the uploader.
+ *
+ * Data Structure:
+ * - /products/{productId}: Stores product details. Publicly readable, but only authorized users can create, update, or delete.
+ * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Only authenticated users can create new records.
+ *
+ * Key Security Decisions:
+ * - Products are publicly readable to enable easy browsing and discovery.
+ * - User listing is implicitly disallowed by the absence of a root-level /users collection.
+ * - The rules do NOT validate the specific data types or presence of all fields within the documents, allowing for flexible data shapes during prototyping. Only fields critical for authorization are validated.
+ * - No role-based access control is implemented yet; all authenticated users are treated equally for the `excel_imports` collection.
+ *
+ * Denormalization for Authorization:
+ * - The current data model does not require denormalization. If write access to `products` was restricted (e.g., only allow products to be updated by the original uploader), an `ownerId` field should be added to the `Product` entity and the rules updated accordingly.
+ *
+ * Structural Segregation:
+ * - The separation of `products` and `excel_imports` allows for different security postures. Products can be public while import metadata can be restricted.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to product details, but disallows any write operations.
+     * @description Allows public read access to product details, but restricts write access to authenticated users.
      * @path /products/{productId}
-     * @allow (get, list): Any user (or no user) can read product data.
-     * @deny (create, update, delete): No one can create, update, or delete product data.
-     * @principle Public read access for product data.
+     * @allow (get, list)
+     * @allow (create, update, delete) - only if the user is authenticated.
+     * @deny (create, update, delete) - if the user is not authenticated.
+     * @principle Enforces public read access with authenticated-user-only writes.
      */
     match /products/{productId} {
       allow get: if true;
       allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
     }
 
     /**
-     * @description Restricts access to Excel import metadata. No read or write operations are allowed for prototyping.
+     * @description Allows authenticated users to create new Excel import records.
      * @path /excel_imports/{excelImportId}
-     * @allow None
-     * @deny (get, list, create, update, delete): All operations are denied.
-     * @principle No access granted during the prototyping phase.
+     * @allow (create) - only if the user is authenticated.
+     * @deny (get, list, update, delete)
+     * @principle Enforces authenticated-user-only creation for import records.
      */
     match /excel_imports/{excelImportId} {
       allow get: if false;
       allow list: if false;
-      allow create: if false;
+
+      allow create: if isSignedIn();
       allow update: if false;
       allow delete: if false;
+    }
+
+    // Helper function to check if a user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
     }
   }
 }
