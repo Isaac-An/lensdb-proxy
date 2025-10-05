@@ -3,10 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import { lenses as allLensesData, SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
 import type { Lens } from '@/app/lib/types';
-import {
-  SidebarProvider,
-  SidebarInset,
-} from '@/components/ui/sidebar';
 import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
 import { ProductList } from './product-list';
@@ -118,26 +114,26 @@ export function DashboardPage() {
   };
 
   return (
-    <SidebarProvider>
-      <FilterSidebar 
-        filters={filters} 
-        setFilters={setFilters} 
-        resetFilters={() => setFilters(initialFilters)}
-        sensorSizes={SENSOR_SIZES}
-        mountTypes={MOUNT_TYPES}
-      />
-      <SidebarInset>
-        <div className="flex flex-col h-screen">
-            <AppHeader
-              searchQuery={filters.searchQuery}
-              onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
-              onImport={handleImport}
-            />
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-                <ProductList lenses={filteredLenses} onSelectLens={handleSelectLens} />
-            </main>
-        </div>
-      </SidebarInset>
+    <div className="flex h-screen bg-background">
+      <div className="w-1/3 border-r">
+          <FilterSidebar 
+            filters={filters} 
+            setFilters={setFilters} 
+            resetFilters={() => setFilters(initialFilters)}
+            sensorSizes={SENSOR_SIZES}
+            mountTypes={MOUNT_TYPES}
+          />
+      </div>
+      <div className="w-2/3 flex flex-col">
+        <AppHeader
+          searchQuery={filters.searchQuery}
+          onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
+          onImport={handleImport}
+        />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <ProductList lenses={filteredLenses} onSelectLens={handleSelectLens} />
+        </main>
+      </div>
 
       {selectedLens && (
         <ProductDetails 
@@ -147,6 +143,6 @@ export function DashboardPage() {
         />
       )}
       
-    </SidebarProvider>
+    </div>
   );
 }

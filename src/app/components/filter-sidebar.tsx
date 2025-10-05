@@ -17,10 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  SidebarContent,
-  SidebarHeader,
-} from '@/components/ui/sidebar';
 import type { Filters } from './dashboard-page';
 
 type FilterSidebarProps = {
@@ -45,19 +41,19 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
   };
 
   return (
-    <>
-      <SidebarHeader>
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            Reset
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground">
-            Last synced: {new Date().toLocaleDateString()}
-        </p>
-      </SidebarHeader>
-      <SidebarContent>
+    <div className="h-full flex flex-col">
+      <div className="p-2 border-b">
+        <div className="flex items-center justify-between p-2">
+            <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
+                Reset
+            </Button>
+            </div>
+            <p className="p-2 text-sm text-muted-foreground">
+                Last synced: {new Date().toLocaleDateString()}
+            </p>
+      </div>
+      <div className="flex-1 overflow-y-auto">
         <div className="p-2">
           <Accordion type="multiple" defaultValue={['attributes', 'numeric']} className="w-full">
             <AccordionItem value="attributes">
@@ -110,8 +106,8 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
             </AccordionItem>
           </Accordion>
         </div>
-      </SidebarContent>
-    </>
+      </div>
+    </div>
   );
 }
 
