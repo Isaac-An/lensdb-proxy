@@ -6,14 +6,14 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { FileInput, Loader2, Search, Sparkles, Upload } from 'lucide-react';
-import React from 'react';
+import React, { useRef } from 'react';
 
 type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onGenerateInsights: () => void;
   isGeneratingInsights: boolean;
-  onImport: () => void;
+  onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onUpload: () => void;
 };
 
@@ -25,6 +25,12 @@ export function AppHeader({
   onImport,
   onUpload
 }: AppHeaderProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
       <div className="flex items-center gap-2">
@@ -48,10 +54,17 @@ export function AppHeader({
           </div>
         </form>
         <div className="hidden md:flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onImport}>
+            <Button variant="outline" size="sm" onClick={handleImportClick}>
                 <FileInput />
                 Import
             </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={onImport}
+              className="hidden"
+              accept=".xlsx, .xls, .csv"
+            />
             <Button variant="outline" size="sm" onClick={onUpload}>
                 <Upload />
                 Upload

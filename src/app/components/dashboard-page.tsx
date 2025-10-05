@@ -14,6 +14,7 @@ import { ProductDetails } from './product-details';
 import { getAIInsights } from '../actions';
 import { AiInsightsDialog } from './ai-insights-dialog';
 import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 
 export type Filters = {
   searchQuery: string;
@@ -36,6 +37,7 @@ const initialFilters: Filters = {
 };
 
 export function DashboardPage() {
+  const [lenses, setLenses] = useState<Lens[]>(allLensesData);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
@@ -45,7 +47,7 @@ export function DashboardPage() {
   const { toast } = useToast();
   
   const filteredLenses = useMemo(() => {
-    return allLensesData.filter(lens => {
+    return lenses.filter(lens => {
       const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl } = filters;
       
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -68,7 +70,7 @@ export function DashboardPage() {
       
       return true;
     });
-  }, [filters]);
+  }, [filters, lenses]);
 
   const handleSelectLens = (lens: Lens) => {
     setSelectedLens(lens);
@@ -91,9 +93,50 @@ export function DashboardPage() {
     });
   };
 
-  const handleImport = () => {
-    toast({ title: 'Feature in development', description: 'Excel import will be available soon.' });
-  }
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+          
+          // Basic validation and type conversion
+          const newLenses: Lens[] = json.map((row: any) => ({
+            ...row,
+            efl: Number(row.efl),
+            maxImageCircle: Number(row.maxImageCircle),
+            fNo: Number(row.fNo),
+            fovD: Number(row.fovD),
+            fovH: Number(row.fovH),
+            fovV: Number(row.fovV),
+            ttl: Number(row.ttl),
+            tvDistortion: Number(row.tvDistortion),
+            relativeIllumination: Number(row.relativeIllumination),
+            chiefRayAngle: Number(row.chiefRayAngle),
+            price: Number(row.price),
+          })).filter(lens => lens.id && lens.name); // Ensure basic fields exist
+
+          setLenses(newLenses);
+          toast({ title: 'Import Successful', description: `${newLenses.length} lenses imported.` });
+        } catch (error) {
+          console.error("Failed to import and parse file:", error);
+          toast({
+            variant: 'destructive',
+            title: 'Import Failed',
+            description: 'Could not read or parse the file. Please ensure it is a valid Excel/CSV file.',
+          });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    // Reset file input
+    event.target.value = '';
+  };
 
   const handleUpload = () => {
     toast({ title: 'Feature in development', description: 'Excel upload will be available soon.' });
