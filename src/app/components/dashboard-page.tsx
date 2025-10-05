@@ -47,21 +47,28 @@ function mapDocToLens(doc: DocumentData): Lens {
     const data = doc.data();
     const lens: Partial<Lens> = { id: doc.id };
   
+    const propertyMapping: { [key: string]: keyof Lens } = {
+      'fovDiagonal': 'fovD',
+      'fovHorizontal': 'fovH',
+      'fovVertical': 'fovV',
+    };
+
     for (const key in data) {
-      if (LENS_PROPERTIES.includes(key as any)) {
+      const mappedKey = propertyMapping[key] || key;
+      if (LENS_PROPERTIES.includes(mappedKey as any)) {
         let value = data[key];
-        if (NUMERIC_PROPERTIES.includes(key as any)) {
+        if (NUMERIC_PROPERTIES.includes(mappedKey as any)) {
           value = typeof value === 'string' ? parseFloat(value) : value;
           if (isNaN(value) || value === null || value === undefined) {
             value = 0;
           }
         }
-        (lens as any)[key] = value;
+        (lens as any)[mappedKey] = value;
       }
     }
   
     for (const prop of LENS_PROPERTIES) {
-        if (lens[prop] === undefined) {
+        if ((lens as any)[prop] === undefined) {
             if (NUMERIC_PROPERTIES.includes(prop)) {
                 (lens as any)[prop] = 0;
             } else {
@@ -150,12 +157,15 @@ export function DashboardPage() {
             'fov - diagonal (°)': 'fovD',
             'fov (d)': 'fovD',
             'fovd': 'fovD',
+            'fov-d': 'fovD',
             'fov - horizontal (°)': 'fovH',
             'fov (h)': 'fovH',
             'fovh': 'fovH',
+            'fov-h': 'fovH',
             'fov - vertical (°)': 'fovV',
             'fov (v)': 'fovV',
             'fovv': 'fovV',
+            'fov-v': 'fovV',
             'ttl (mm)': 'ttl',
             'ttl': 'ttl',
             'tv distortion (%)': 'tvDistortion',
@@ -224,9 +234,10 @@ export function DashboardPage() {
                 toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
             })
             .catch((error) => {
+              // Simplified error handling
               const permissionError = new FirestorePermissionError({
-                path: productsCollection.path,
-                operation: 'write',
+                  path: productsCollection.path,
+                  operation: 'write'
               });
               errorEmitter.emit('permission-error', permissionError);
               toast({
@@ -275,3 +286,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
