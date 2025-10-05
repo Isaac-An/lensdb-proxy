@@ -144,46 +144,39 @@ export function DashboardPage() {
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-          const keyMap: { [key: string]: keyof Lens } = {
-            'product name': 'name',
-            'name': 'name',
-            'sensor size': 'sensorSize',
-            'efl (mm)': 'efl',
-            'efl': 'efl',
-            'max image circle (mm)': 'maxImageCircle',
-            'max image circle': 'maxImageCircle',
-            'f. no.': 'fNo',
-            'fno': 'fNo',
-            'fov - diagonal (°)': 'fovD',
-            'fov (d)': 'fovD',
-            'fovd': 'fovD',
-            'fov-d': 'fovD',
-            'fov - horizontal (°)': 'fovH',
-            'fov (h)': 'fovH',
-            'fovh': 'fovH',
-            'fov-h': 'fovH',
-            'fov - vertical (°)': 'fovV',
-            'fov (v)': 'fovV',
-            'fovv': 'fovV',
-            'fov-v': 'fovV',
-            'ttl (mm)': 'ttl',
-            'ttl': 'ttl',
-            'tv distortion (%)': 'tvDistortion',
-            'tv distortion': 'tvDistortion',
-            'relative illumination (%)': 'relativeIllumination',
-            'relative illumination': 'relativeIllumination',
-            'chief ray angle (°)': 'chiefRayAngle',
-            'chief ray angle': 'chiefRayAngle',
-            'mount type': 'mountType',
-            'mount': 'mountType',
-            'lens structure': 'lensStructure',
+          const normalizeHeader = (header: string) => 
+            header.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          const headerMap: { [key: string]: keyof Lens } = {
+            productname: 'name',
+            name: 'name',
+            sensorsize: 'sensorSize',
+            eflmm: 'efl',
+            efl: 'efl',
+            maximagecirclemm: 'maxImageCircle',
+            maximagecircle: 'maxImageCircle',
+            fno: 'fNo',
+            fovdiagonal: 'fovD',
+            fovd: 'fovD',
+            fovhorizontal: 'fovH',
+            fovh: 'fovH',
+            fovvertical: 'fovV',
+            fovv: 'fovV',
+            ttlmm: 'ttl',
+            ttl: 'ttl',
+            tvdistortion: 'tvDistortion',
+            relativeillumination: 'relativeIllumination',
+            chiefrayangle: 'chiefRayAngle',
+            mounttype: 'mountType',
+            mount: 'mountType',
+            lensstructure: 'lensStructure',
           };
           
           const importedLenses = json.map((row: any) => {
             const lensData: Partial<Lens> = {};
             for (const excelKey in row) {
-              const lowerKey = excelKey.toLowerCase().trim();
-              const firestoreKey = keyMap[lowerKey];
+              const normalizedKey = normalizeHeader(excelKey);
+              const firestoreKey = headerMap[normalizedKey];
               
               if (firestoreKey) {
                 let value = row[excelKey];
@@ -286,5 +279,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
