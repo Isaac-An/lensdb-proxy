@@ -48,7 +48,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             <DetailItem label="Mount Type" value={lens.mountType} />
             <DetailItem label="Lens Structure" value={lens.lensStructure} />
             <Separator />
-            <DetailItem label="Price" value={`$${lens.price.toFixed(2)}`} isPrimary />
+            <DetailItem label="Price" value={`$${(lens.price || 0).toFixed(2)}`} isPrimary />
         </div>
       </SheetContent>
     </Sheet>

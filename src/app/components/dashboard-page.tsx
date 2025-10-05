@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { lenses as allLensesData, SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
+import { SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
 import type { Lens } from '@/app/lib/types';
 import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
@@ -36,9 +36,14 @@ const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
   'chiefRayAngle', 'mountType', 'lensStructure', 'price'
 ];
 
+const NUMERIC_PROPERTIES: (keyof Lens)[] = [
+    'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
+    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
+];
+
 
 export function DashboardPage() {
-  const [lenses, setLenses] = useState<Lens[]>(allLensesData);
+  const [lenses, setLenses] = useState<Lens[]>([]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
@@ -107,12 +112,19 @@ export function DashboardPage() {
               const colIndex = propMap[prop];
               if (colIndex !== undefined && row[colIndex] !== undefined) {
                  const value = row[colIndex];
-                 if (typeof (allLensesData[0] as any)?.[prop] === 'number' || prop === 'fNo' || prop === 'efl' || prop === 'price') {
+                  if (NUMERIC_PROPERTIES.includes(prop as any)) {
                     (lensData as any)[prop] = Number(value) || 0;
-                 } else {
+                  } else {
                     (lensData as any)[prop] = value;
-                 }
+                  }
               }
+            }
+
+            // Ensure all numeric properties have a value
+            for (const prop of NUMERIC_PROPERTIES) {
+                if (lensData[prop] === undefined) {
+                    (lensData as any)[prop] = 0;
+                }
             }
             
             return {
