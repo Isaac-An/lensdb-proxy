@@ -80,8 +80,14 @@ export function DashboardPage() {
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet);
           
-          const importedLenses: Lens[] = json.map((row: any) => ({
+          let maxId = 0;
+          if(lenses && lenses.length > 0){
+            maxId = Math.max(...lenses.map(l => parseInt(l.id.split('-')[1])));
+          }
+
+          const importedLenses: Lens[] = json.map((row: any, index: number) => ({
             ...row,
+            id: `AL-${String(maxId + index + 1).padStart(3, '0')}`,
             efl: Number(row.efl),
             maxImageCircle: Number(row.maxImageCircle),
             fNo: Number(row.fNo),
@@ -93,7 +99,7 @@ export function DashboardPage() {
             relativeIllumination: Number(row.relativeIllumination),
             chiefRayAngle: Number(row.chiefRayAngle),
             price: Number(row.price),
-          })).filter(lens => lens.id && lens.name);
+          })).filter(lens => lens.name);
 
           setLenses(prevLenses => {
             const existingIds = new Set(prevLenses.map(l => l.id));
