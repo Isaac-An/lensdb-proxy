@@ -1,59 +1,45 @@
 /**
- * @file Overview
- * This ruleset is in prototyping mode and prioritizes strong authorization over strict schema validation.
+ * @fileOverview Firestore Security Rules for the application.
  *
  * Core Philosophy:
- * This ruleset focuses on securing access to product data and Excel import metadata.  It enforces a data segregation model
- * where product data and import metadata are stored in separate collections with potentially different access control requirements.
- * The current ruleset assumes all writes to both `products` and `excel_imports` are disallowed in this prototype mode.
+ * This ruleset prioritizes a secure-by-default posture, focusing on preventing unauthorized data access and modification.
+ * It currently allows public read access to product data but restricts all write access.
+ * All write requests are denied and require a future update to implement appropriate authorization checks.
  *
  * Data Structure:
- * - /products/{productId}: Stores product details. Write access is currently denied.
- * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Write access is currently denied.
+ * The data is organized into two top-level collections:
+ * - `/products/{productId}`: Stores the details of each product.
+ * - `/excel_imports/{excelImportId}`: Stores metadata about Excel imports.
  *
  * Key Security Decisions:
- * - Write access is disabled on `products`.
- * - Write access is disabled on `excel_imports`.
- * - Listing of `products` is public to allow reading of lens specifications, but this should be updated in later iterations to prevent unwanted data scraping or misuse.
- * - Listing of `excel_imports` is disallowed to hide potentially sensitive metadata about data imports.
- *
- * Denormalization for Authorization:
- *  No denormalization is currently necessary, as write access is disabled.
- *
- * Structural Segregation:
- *  The separation of `products` and `excel_imports` collections reflects a design decision to keep product data separate from import metadata, enabling different access control rules for each.
+ * - Listing products is currently public to facilitate easy browsing, but this may require future refinement.
+ * - Write access to product data and excel import data is currently disabled.
+ * - No user-specific data is currently stored, so ownership models are not yet implemented.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls read and write access to individual product documents.
+     * @description Grants public read access to product details but denies all write operations.
      * @path /products/{productId}
-     * @allow get, list: Anyone can read product details.
-     * @deny create, update, delete: No one can create, update, or delete product documents.
-     * @principle Public read, owner-only writes (writes are disabled in this prototype).
+     * @allow (get, list): Any user can read product details.
+     * @deny (create, update, delete): No user can create, update, or delete product details.
+     * @principle Allows public read access while restricting write access for now.
      */
     match /products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Controls read and write access to Excel import metadata.
+     * @description Denies all access to excel import metadata.
      * @path /excel_imports/{excelImportId}
-     * @deny get, list, create, update, delete: No one can read or write Excel import metadata.
-     * @principle Strict owner-only access (access is disabled in this prototype).
+     * @deny (get, list, create, update, delete): No user can read or write excel import metadata.
+     * @principle Restricts access to excel import metadata.
      */
     match /excel_imports/{excelImportId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list, create, update, delete: if false;
     }
   }
 }
