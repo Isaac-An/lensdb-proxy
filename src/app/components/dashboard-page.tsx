@@ -38,12 +38,6 @@ const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
     'chiefRayAngle', 'mountType', 'lensStructure'
 ];
 
-const DB_TO_LENS_PROP_MAP: { [key: string]: keyof Lens } = {
-  'fovDiagonal': 'fovD',
-  'fovHorizontal': 'fovH',
-  'fovVertical': 'fovV',
-};
-
 const NUMERIC_PROPERTIES: (keyof Lens)[] = [
     'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
     'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle'
@@ -54,16 +48,15 @@ function mapDocToLens(doc: DocumentData): Lens {
     const lens: Partial<Lens> = { id: doc.id };
   
     for (const key in data) {
-      const mappedKey = DB_TO_LENS_PROP_MAP[key] || key;
-      if (LENS_PROPERTIES.includes(mappedKey as any)) {
+      if (LENS_PROPERTIES.includes(key as any)) {
         let value = data[key];
-        if (NUMERIC_PROPERTIES.includes(mappedKey as any)) {
+        if (NUMERIC_PROPERTIES.includes(key as any)) {
           value = typeof value === 'string' ? parseFloat(value) : value;
           if (isNaN(value) || value === null || value === undefined) {
             value = 0;
           }
         }
-        (lens as any)[mappedKey] = value;
+        (lens as any)[key] = value;
       }
     }
   
@@ -144,47 +137,62 @@ export function DashboardPage() {
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-          const importedLenses: DocumentData[] = json.map((row: any) => {
-            const lensData: { [key: string]: any } = {};
-            const excelKeys = Object.keys(row);
-
-            const keyMap: {[key:string]: string} = {
-              'f. no.': 'fNo',
-              'fov - diagonal': 'fovD',
-              'fov - horizontal': 'fovH',
-              'fov - vertical': 'fovV',
-              'mount type': 'mountType',
-              'sensor size': 'sensorSize',
-              'lens structure': 'lensStructure',
-              'max image circle': 'maxImageCircle',
-              'tv distortion': 'tvDistortion',
-              'relative illumination': 'relativeIllumination',
-              'chief ray angle': 'chiefRayAngle'
-            };
-
-            for (const excelKey of excelKeys) {
-                const lowerKey = excelKey.toLowerCase().trim();
-                let firestoreKey = lowerKey.replace(/[^a-zA-Z0-9]/g, '');
-                
-                if (keyMap[lowerKey]) {
-                    firestoreKey = keyMap[lowerKey];
+          const keyMap: { [key: string]: keyof Lens } = {
+            'product name': 'name',
+            'name': 'name',
+            'sensor size': 'sensorSize',
+            'efl (mm)': 'efl',
+            'efl': 'efl',
+            'max image circle (mm)': 'maxImageCircle',
+            'max image circle': 'maxImageCircle',
+            'f. no.': 'fNo',
+            'fno': 'fNo',
+            'fov - diagonal (°)': 'fovD',
+            'fov (d)': 'fovD',
+            'fovd': 'fovD',
+            'fov - horizontal (°)': 'fovH',
+            'fov (h)': 'fovH',
+            'fovh': 'fovH',
+            'fov - vertical (°)': 'fovV',
+            'fov (v)': 'fovV',
+            'fovv': 'fovV',
+            'ttl (mm)': 'ttl',
+            'ttl': 'ttl',
+            'tv distortion (%)': 'tvDistortion',
+            'tv distortion': 'tvDistortion',
+            'relative illumination (%)': 'relativeIllumination',
+            'relative illumination': 'relativeIllumination',
+            'chief ray angle (°)': 'chiefRayAngle',
+            'chief ray angle': 'chiefRayAngle',
+            'mount type': 'mountType',
+            'mount': 'mountType',
+            'lens structure': 'lensStructure',
+          };
+          
+          const importedLenses = json.map((row: any) => {
+            const lensData: Partial<Lens> = {};
+            for (const excelKey in row) {
+              const lowerKey = excelKey.toLowerCase().trim();
+              const firestoreKey = keyMap[lowerKey];
+              
+              if (firestoreKey) {
+                let value = row[excelKey];
+                if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
+                  value = parseFloat(value);
+                  if (isNaN(value)) value = 0;
                 }
-
-                if ([...LENS_PROPERTIES, 'fovDiagonal', 'fovHorizontal', 'fovVertical'].includes(firestoreKey as any)) {
-                    let value = row[excelKey];
-                    if (NUMERIC_PROPERTIES.includes(firestoreKey as any)) {
-                        value = parseFloat(value);
-                        if (isNaN(value)) value = 0;
-                    }
-                    lensData[firestoreKey] = value;
-                }
+                (lensData as any)[firestoreKey] = value;
+              }
             }
 
-
             LENS_PROPERTIES.forEach(prop => {
-              if (lensData[prop] === undefined) {
-                lensData[prop] = NUMERIC_PROPERTIES.includes(prop) ? 0 : '';
-              }
+                if ((lensData as any)[prop] === undefined) {
+                    if (NUMERIC_PROPERTIES.includes(prop)) {
+                        (lensData as any)[prop] = 0;
+                    } else if (prop !== 'name') {
+                        (lensData as any)[prop] = '';
+                    }
+                }
             });
 
             return lensData;
@@ -194,7 +202,7 @@ export function DashboardPage() {
             toast({
               variant: 'destructive',
               title: 'Import Warning',
-              description: 'No valid lens data found in the file.',
+              description: 'No valid lens data found in the file. Check column headers.',
             });
             return;
           }
@@ -216,17 +224,16 @@ export function DashboardPage() {
                 toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
             })
             .catch((error) => {
-                // Simplified error handling
-                const permissionError = new FirestorePermissionError({
-                    path: productsCollection.path,
-                    operation: 'write'
-                });
-                errorEmitter.emit('permission-error', permissionError);
-                toast({
-                    variant: 'destructive',
-                    title: 'Import Failed',
-                    description: 'Could not save to database. Check permissions.',
-                });
+              const permissionError = new FirestorePermissionError({
+                path: productsCollection.path,
+                operation: 'write',
+              });
+              errorEmitter.emit('permission-error', permissionError);
+              toast({
+                  variant: 'destructive',
+                  title: 'Import Failed',
+                  description: 'Could not save to database. Check permissions.',
+              });
           });
       };
       reader.readAsArrayBuffer(file);
