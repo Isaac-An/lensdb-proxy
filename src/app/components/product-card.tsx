@@ -15,31 +15,30 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type ProductCardProps = {
   lens: Lens;
+  index: number;
   onSelectLens: (lens: Lens) => void;
 };
 
-const getImageUrl = (id: string) => {
-    const numericId = parseInt(id.split('-')[1]);
-    const image = PlaceHolderImages[numericId-1];
+const getImageUrl = (index: number) => {
+    const image = PlaceHolderImages[index % PlaceHolderImages.length];
     return image ? image.imageUrl : 'https://picsum.photos/seed/default/600/400';
 }
-const getImageHint = (id: string) => {
-    const numericId = parseInt(id.split('-')[1]);
-    const image = PlaceHolderImages[numericId-1];
+const getImageHint = (index: number) => {
+    const image = PlaceHolderImages[index % PlaceHolderImages.length];
     return image ? image.imageHint : 'camera lens';
 }
 
-export function ProductCard({ lens, onSelectLens }: ProductCardProps) {
+export function ProductCard({ lens, index, onSelectLens }: ProductCardProps) {
   return (
     <Card className="flex flex-col transition-all hover:shadow-lg hover:-translate-y-1">
       <CardHeader className="p-0">
         <Image
-          src={getImageUrl(lens.id)}
+          src={getImageUrl(index)}
           alt={`Image of ${lens.name}`}
           width={600}
           height={400}
           className="rounded-t-lg object-cover aspect-[3/2]"
-          data-ai-hint={getImageHint(lens.id)}
+          data-ai-hint={getImageHint(index)}
         />
       </CardHeader>
       <CardContent className="flex-1 p-4">

@@ -2,75 +2,75 @@
   "placeholderImages": [
     {
       "id": "lens-1",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens with beautiful reflections.",
+      "imageUrl": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-2",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1599493393915-f604538a3582?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A camera lens pointing towards the viewer on a dark background.",
+      "imageUrl": "https://images.unsplash.com/photo-1599493393915-f604538a3582?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-3",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1600052525542-83a968651803?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "The front element of a professional camera lens with coatings visible.",
+      "imageUrl": "https://images.unsplash.com/photo-1600052525542-83a968651803?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-4",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1502920923511-2aa5a69f25a5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A camera lens with aperture blades visible inside.",
+      "imageUrl": "https://images.unsplash.com/photo-1502920923511-2aa5a69f25a5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-5",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1619864503706-6a59d81b4919?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "A person holding a large telephoto lens.",
+      "imageUrl": "https://images.unsplash.com/photo-1619864503706-6a59d81b4919?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "telephoto lens"
     },
     {
       "id": "lens-6",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1574979624992-20689f9232de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "A collection of vintage camera lenses on a wooden table.",
+      "imageUrl": "https://images.unsplash.com/photo-1574979624992-20689f9232de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "vintage lenses"
     },
     {
       "id": "lens-7",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1621243543166-3b7a5a8947b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "A modern mirrorless camera with a prime lens attached.",
+      "imageUrl": "https://images.unsplash.com/photo-1621243543166-3b7a5a8947b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "mirrorless camera"
     },
     {
       "id": "lens-8",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1616900223004-1b0333c1d34c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "Close-up of a wide-angle lens showing the curvature of the glass.",
+      "imageUrl": "https://images.unsplash.com/photo-1616900223004-1b0333c1d34c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "wide-angle lens"
     },
     {
       "id": "lens-9",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1565516335388-959829377488?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A black camera lens with a red ring detail.",
+      "imageUrl": "https://images.unsplash.com/photo-1565516335388-959829377488?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=600",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-10",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1500603720222-eb7a1f997356?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "A camera lens sitting on a map, concept of travel photography.",
+      "imageUrl": "https://images.unsplash.com/photo-1500603720222-eb7a1f997356?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "travel photography"
     },
     {
       "id": "lens-11",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1568819198303-423c92b23610?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMXx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "Detail of the focus ring on a manual camera lens.",
+      "imageUrl": "https://images.unsplash.com/photo-1568819198303-423c92b23610?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMXx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "focus ring"
     },
     {
       "id": "lens-12",
-      "description": "A close-up of a camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1620356238322-b5b59a6a5d43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMnx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "camera lens"
+      "description": "Light reflecting off the surface of a camera lens.",
+      "imageUrl": "https://images.unsplash.com/photo-1620356238322-b5b59a6a5d43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMnx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=600",
+      "imageHint": "lens flare"
     }
   ]
 }
