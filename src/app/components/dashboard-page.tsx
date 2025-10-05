@@ -33,9 +33,9 @@ const initialFilters: Filters = {
 };
 
 const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
-  'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
-  'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
-  'chiefRayAngle', 'mountType', 'lensStructure'
+    'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
+    'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
+    'chiefRayAngle', 'mountType', 'lensStructure'
 ];
 
 const DB_TO_LENS_PROP_MAP: { [key: string]: keyof Lens } = {
@@ -87,7 +87,11 @@ export function DashboardPage() {
   const { toast } = useToast();
 
   const firestore = useFirestore();
-  const productsCollection = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+  const productsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'products');
+  }, [firestore]);
+  
   const { data: rawLenses, isLoading } = useCollection<DocumentData>(productsCollection);
 
   const lenses = useMemo(() => {
@@ -129,62 +133,55 @@ export function DashboardPage() {
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (file && firestore && productsCollection) {
       const reader = new FileReader();
       reader.onload = async (e) => {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
-          const header = json[0] as string[];
-          const propMap: { [key: string]: { index: number, dbKey: string } } = {};
-          
-          header.forEach((h, i) => {
-              const lowerH = h.toLowerCase().trim();
-              let dbKey: string | undefined;
-              if (lowerH === 'f. no.') dbKey = 'fNo';
-              else if (lowerH === 'fov - diagonal') dbKey = 'fovDiagonal';
-              else if (lowerH === 'fov - horizontal') dbKey = 'fovHorizontal';
-              else if (lowerH === 'fov - vertical') dbKey = 'fovVertical';
-              else {
-                const propName = LENS_PROPERTIES.find(p => p.toLowerCase() === lowerH);
-                if (propName) dbKey = propName;
-              }
-            
-              if (dbKey) {
-                propMap[dbKey] = { index: i, dbKey };
-              }
-          });
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-          const importedLenses: DocumentData[] = json.slice(1).map((row: any[]) => {
+          const importedLenses: DocumentData[] = json.map((row: any) => {
             const lensData: { [key: string]: any } = {};
-            for (const key in propMap) {
-                const { index, dbKey } = propMap[key];
-                if (row[index] !== undefined && row[index] !== null) {
-                    const value = row[index];
-                    const lensPropKey = DB_TO_LENS_PROP_MAP[dbKey] || dbKey;
+            const excelKeys = Object.keys(row);
 
-                    if (NUMERIC_PROPERTIES.includes(lensPropKey as any)) {
-                        const numValue = parseFloat(String(value));
-                        lensData[dbKey] = isNaN(numValue) ? 0 : numValue;
-                    } else {
-                        lensData[dbKey] = String(value);
-                    }
+            // Map Excel columns (like 'F. No.') to Firestore fields (like 'fNo')
+            const keyMap: {[key:string]: string} = {
+              'f. no.': 'fNo',
+              'fov - diagonal': 'fovD',
+              'fov - horizontal': 'fovH',
+              'fov - vertical': 'fovV',
+              'mount type': 'mountType',
+              'sensor size': 'sensorSize',
+              'lens structure': 'lensStructure',
+              'max image circle': 'maxImageCircle',
+              'tv distortion': 'tvDistortion',
+              'relative illumination': 'relativeIllumination',
+              'chief ray angle': 'chiefRayAngle'
+            };
+
+            for (const excelKey of excelKeys) {
+              const lowerKey = excelKey.toLowerCase().trim();
+              const firestoreKey = keyMap[lowerKey] || excelKey;
+              
+              if (LENS_PROPERTIES.includes(firestoreKey as any)) {
+                let value = row[excelKey];
+                if (NUMERIC_PROPERTIES.includes(firestoreKey as any)) {
+                  value = parseFloat(value);
+                  if (isNaN(value)) value = 0;
                 }
-            }
-
-            for (const prop of LENS_PROPERTIES) {
-              const dbKey = Object.keys(DB_TO_LENS_PROP_MAP).find(k => DB_TO_LENS_PROP_MAP[k] === prop) || prop;
-              if (lensData[dbKey] === undefined) {
-                  if (NUMERIC_PROPERTIES.includes(prop)) {
-                      lensData[dbKey] = 0;
-                  } else {
-                      lensData[dbKey] = '';
-                  }
+                lensData[firestoreKey] = value;
               }
             }
+
+            // Ensure all properties exist, providing defaults
+            LENS_PROPERTIES.forEach(prop => {
+              if (lensData[prop] === undefined) {
+                lensData[prop] = NUMERIC_PROPERTIES.includes(prop) ? 0 : '';
+              }
+            });
+
             return lensData;
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
@@ -204,25 +201,20 @@ export function DashboardPage() {
             batch.delete(doc.ref);
           });
           
-          let addedCount = 0;
-          const allLensesForError: {path: string, data: DocumentData}[] = [];
-          
           importedLenses.forEach(newLens => {
             const newDocRef = doc(productsCollection);
             batch.set(newDocRef, newLens);
-            addedCount++;
-            allLensesForError.push({ path: newDocRef.path, data: newLens });
           });
           
           batch.commit()
             .then(() => {
-                toast({ title: 'Import Complete', description: `${addedCount} lenses imported successfully.` });
+                toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
             })
             .catch((error) => {
+                // Simplified error handling
                 const permissionError = new FirestorePermissionError({
                     path: productsCollection.path,
-                    operation: 'write',
-                    requestResourceData: allLensesForError.map(l => l.data)
+                    operation: 'write'
                 });
                 errorEmitter.emit('permission-error', permissionError);
                 toast({
