@@ -1,45 +1,52 @@
 /**
- * @fileOverview Firestore Security Rules for the application.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- * This ruleset prioritizes a secure-by-default posture, focusing on preventing unauthorized data access and modification.
- * It currently allows public read access to product data but restricts all write access.
- * All write requests are denied and require a future update to implement appropriate authorization checks.
+ * This ruleset prioritizes security by default, restricting all access unless explicitly allowed.
+ * In this Prototyping phase, we will focus on highly secure authorization but allow flexible data shapes.
+ * This allows rapid iteration on the data model while maintaining a strong security posture.
  *
  * Data Structure:
- * The data is organized into two top-level collections:
- * - `/products/{productId}`: Stores the details of each product.
- * - `/excel_imports/{excelImportId}`: Stores metadata about Excel imports.
+ * The Firestore database contains two top-level collections: `/products/{productId}` and `/excel_imports/{excelImportId}`.
+ * The `products` collection stores lens product data.
+ * The `excel_imports` collection stores metadata about Excel import operations.
  *
  * Key Security Decisions:
- * - Listing products is currently public to facilitate easy browsing, but this may require future refinement.
- * - Write access to product data and excel import data is currently disabled.
- * - No user-specific data is currently stored, so ownership models are not yet implemented.
+ * - The `products` collection is NOT publicly readable or writable, write operations are denied. This can be changed once ownership is established.
+ * - The `excel_imports` collection is NOT publicly readable or writable, write operations are denied. Access to this collection will likely be restricted to admin users, and a suitable access control mechanism will be needed.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants public read access to product details but denies all write operations.
+     * @description Controls access to the /products/{productId} collection.
      * @path /products/{productId}
-     * @allow (get, list): Any user can read product details.
-     * @deny (create, update, delete): No user can create, update, or delete product details.
-     * @principle Allows public read access while restricting write access for now.
+     * @allow (get, list): No one can read this, because it is explicitly denied.
+     * @deny (create, update, delete): No one can write to this, because it is explicitly denied.
+     * @principle Strict deny-by-default for prototyping.
      */
     match /products/{productId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Denies all access to excel import metadata.
+     * @description Controls access to the /excel_imports/{excelImportId} collection.
      * @path /excel_imports/{excelImportId}
-     * @deny (get, list, create, update, delete): No user can read or write excel import metadata.
-     * @principle Restricts access to excel import metadata.
+     * @allow (get, list): No one can read this, because it is explicitly denied.
+     * @deny (create, update, delete): No one can write to this, because it is explicitly denied.
+     * @principle Strict deny-by-default for prototyping.
      */
     match /excel_imports/{excelImportId} {
-      allow get, list, create, update, delete: if false;
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
