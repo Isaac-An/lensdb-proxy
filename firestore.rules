@@ -1,59 +1,47 @@
 /**
- * @file Overview
- * This ruleset is in prototyping mode and prioritizes strong authorization over strict schema validation.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- * This ruleset focuses on securing access to product data and Excel import metadata.  It enforces a data segregation model
- * where product data and import metadata are stored in separate collections with potentially different access control requirements.
- * The current ruleset assumes all writes to both `products` and `excel_imports` are disallowed in this prototype mode.
+ * This ruleset provides open read access for the `products` collection.
+ * Write operations to `/products` are denied, as the error indicates that it is not secure and requires authentication.
+ * Write operations to `/excel_imports` are denied, as it should require authentication and authorization.
  *
  * Data Structure:
- * - /products/{productId}: Stores product details. Write access is currently denied.
- * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Write access is currently denied.
+ * The database contains two top-level collections: `products` and `excel_imports`.
+ * `/products/{productId}` stores detailed product information.
+ * `/excel_imports/{excelImportId}` stores metadata about Excel import operations.
  *
  * Key Security Decisions:
- * - Write access is disabled on `products`.
- * - Write access is disabled on `excel_imports`.
- * - Listing of `products` is public to allow reading of lens specifications, but this should be updated in later iterations to prevent unwanted data scraping or misuse.
- * - Listing of `excel_imports` is disallowed to hide potentially sensitive metadata about data imports.
+ * - Listing of products is allowed for all users.
+ * - Write operations to products are denied and must require authentication.
+ * - No user listing is allowed (to protect user privacy).
  *
- * Denormalization for Authorization:
- *  No denormalization is currently necessary, as write access is disabled.
- *
- * Structural Segregation:
- *  The separation of `products` and `excel_imports` collections reflects a design decision to keep product data separate from import metadata, enabling different access control rules for each.
+ * NOTE: These rules are configured for PROTOTYPING. Data validation is omitted to allow for rapid iteration.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls read and write access to individual product documents.
+     * @description Allows public read access to product details. Write operations are denied.
      * @path /products/{productId}
-     * @allow get, list: Anyone can read product details.
-     * @deny create, update, delete: No one can create, update, or delete product documents.
-     * @principle Public read, owner-only writes (writes are disabled in this prototype).
+     * @allow get, list: Any user can read product details.
+     * @deny create, update, delete: No one can create, update, or delete products without authentication.
+     * @principle Allows public read access for prototyping.
      */
     match /products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false; // TODO: Add authentication and authorization checks for product writes.
     }
 
     /**
-     * @description Controls read and write access to Excel import metadata.
+     * @description Denies all access to Excel import metadata.
      * @path /excel_imports/{excelImportId}
-     * @deny get, list, create, update, delete: No one can read or write Excel import metadata.
-     * @principle Strict owner-only access (access is disabled in this prototype).
+     * @deny get, list, create, update, delete: No one can read or write Excel import metadata without authentication and authorization.
+     * @principle Restricts access to Excel import metadata for security.
      */
     match /excel_imports/{excelImportId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list, create, update, delete: if false; // TODO: Add authentication and authorization checks for excel import operations.
     }
   }
 }
