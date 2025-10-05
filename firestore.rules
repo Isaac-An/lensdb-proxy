@@ -1,0 +1,52 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset defines access control for the 'products' and 'excel_imports' collections.
+ *
+ * Core Philosophy:
+ * The security model prioritizes simplicity and authorization independence through structural segregation.
+ *
+ * Data Structure:
+ * - /products/{productId}: Stores product details. Intended for public read access, but requires authentication for writes.
+ * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Restricted access.
+ *
+ * Key Security Decisions:
+ * - Products: Public read access is allowed, but writes are disallowed.
+ * - Excel Imports: Access to import metadata is denied to all users.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Defines read access to product documents.
+     * @path /products/{productId}
+     * @allow (get, list) Allow any user to read product details.
+     * @deny (create, update, delete) Prevent any user from writing product details.
+     * @principle Allows public read access to products but prohibits modifications.
+     */
+    match /products/{productId} {
+      allow get: if true;
+      allow list: if true;
+
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Restricts access to excel import metadata.
+     * @path /excel_imports/{excelImportId}
+     * @allow None
+     * @deny (get, list, create, update, delete) Prevent all access to excel import documents.
+     * @principle Restricts all access to the excel_imports collection.
+     */
+    match /excel_imports/{excelImportId} {
+      allow get: if false;
+      allow list: if false;
+
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

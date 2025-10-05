@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a lens product with its specifications and attributes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product."
+        },
+        "sensorSize": {
+          "type": "string",
+          "description": "Sensor size supported by the lens."
+        },
+        "efl": {
+          "type": "number",
+          "description": "Effective focal length of the lens."
+        },
+        "maxImageCircle": {
+          "type": "number",
+          "description": "Maximum image circle of the lens."
+        },
+        "fNo": {
+          "type": "number",
+          "description": "F-number (aperture) of the lens."
+        },
+        "fovDiagonal": {
+          "type": "number",
+          "description": "Field of view (diagonal) of the lens."
+        },
+        "fovHorizontal": {
+          "type": "number",
+          "description": "Field of view (horizontal) of the lens."
+        },
+        "fovVertical": {
+          "type": "number",
+          "description": "Field of view (vertical) of the lens."
+        },
+        "ttl": {
+          "type": "number",
+          "description": "Total track length of the lens."
+        },
+        "tvDistortion": {
+          "type": "number",
+          "description": "TV distortion of the lens."
+        },
+        "relativeIllumination": {
+          "type": "number",
+          "description": "Relative illumination of the lens."
+        },
+        "chiefRayAngle": {
+          "type": "number",
+          "description": "Chief ray angle of the lens."
+        },
+        "mountType": {
+          "type": "string",
+          "description": "Mount type of the lens."
+        },
+        "lensStructure": {
+          "type": "string",
+          "description": "Optical structure of the lens."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product lens."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the product lens."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "sensorSize",
+        "efl",
+        "maxImageCircle",
+        "fNo",
+        "fovDiagonal",
+        "fovHorizontal",
+        "fovVertical",
+        "ttl",
+        "tvDistortion",
+        "relativeIllumination",
+        "chiefRayAngle",
+        "mountType",
+        "lensStructure",
+        "price"
+      ]
+    },
+    "ExcelImport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExcelImport",
+      "type": "object",
+      "description": "Represents an import of product data from an Excel file.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the excel import record."
+        },
+        "filename": {
+          "type": "string",
+          "description": "Name of the imported Excel file."
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "Date and time when the Excel file was uploaded.",
+          "format": "date-time"
+        },
+        "recordCount": {
+          "type": "number",
+          "description": "Number of product records imported from the Excel file."
+        }
+      },
+      "required": [
+        "id",
+        "filename",
+        "uploadDate",
+        "recordCount"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product details. Includes all fields as defined in the Product schema.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "Unique identifier for the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/excel_imports/{excelImportId}",
+        "definition": {
+          "entityName": "ExcelImport",
+          "schema": {
+            "$ref": "#/backend/entities/ExcelImport"
+          },
+          "description": "Stores metadata about Excel imports, including the filename, upload date, and record count.",
+          "params": [
+            {
+              "name": "excelImportId",
+              "description": "Unique identifier for the excel import record."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to efficiently manage product data imported from Excel files, support searching and filtering, and provide a foundation for future AI-driven insights.  The core principle is authorization independence achieved through structural segregation.  The `products` collection stores product details. A separate `excel_imports` collection stores metadata about each Excel import. This segregation supports different access control needs, as access to import metadata might be restricted to admin users or the user who uploaded the file. \n\nQAPs (Rules Are Not Filters) are addressed by the segregation of data into collections with homogeneous security postures. Listing products does not require filtering based on ownership or roles; therefore, the rules can efficiently grant or deny access to entire collections or documents.\n\nFuture considerations:\n\n*   For the AI Product Insights feature, consider creating a separate collection (e.g., `/product_insights/{productId}`) to store the generated summaries. This would allow for efficient retrieval and management of insights.\n*   If user-specific preferences or saved searches are implemented, these could be stored under the `/users/{userId}/preferences` path."
+  }
+}
