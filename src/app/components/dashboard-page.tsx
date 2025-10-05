@@ -80,8 +80,7 @@ export function DashboardPage() {
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet);
           
-          // Basic validation and type conversion
-          const newLenses: Lens[] = json.map((row: any) => ({
+          const importedLenses: Lens[] = json.map((row: any) => ({
             ...row,
             efl: Number(row.efl),
             maxImageCircle: Number(row.maxImageCircle),
@@ -94,10 +93,15 @@ export function DashboardPage() {
             relativeIllumination: Number(row.relativeIllumination),
             chiefRayAngle: Number(row.chiefRayAngle),
             price: Number(row.price),
-          })).filter(lens => lens.id && lens.name); // Ensure basic fields exist
+          })).filter(lens => lens.id && lens.name);
 
-          setLenses(newLenses);
-          toast({ title: 'Import Successful', description: `${newLenses.length} lenses imported.` });
+          setLenses(prevLenses => {
+            const existingIds = new Set(prevLenses.map(l => l.id));
+            const newLenses = importedLenses.filter(l => !existingIds.has(l.id));
+            return [...prevLenses, ...newLenses];
+          });
+
+          toast({ title: 'Import Successful', description: `${importedLenses.length} lenses processed.` });
         } catch (error) {
           console.error("Failed to import and parse file:", error);
           toast({
@@ -109,7 +113,6 @@ export function DashboardPage() {
       };
       reader.readAsArrayBuffer(file);
     }
-    // Reset file input
     event.target.value = '';
   };
 
