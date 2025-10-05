@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
 import type { Lens } from '@/app/lib/types';
 import { FilterSidebar } from './filter-sidebar';
@@ -49,6 +49,25 @@ export function DashboardPage() {
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const { toast } = useToast();
   
+  useEffect(() => {
+    try {
+      const storedLenses = localStorage.getItem('appleye-lenses');
+      if (storedLenses) {
+        setLenses(JSON.parse(storedLenses));
+      }
+    } catch (error) {
+      console.error("Failed to load lenses from localStorage", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('appleye-lenses', JSON.stringify(lenses));
+    } catch (error) {
+      console.error("Failed to save lenses to localStorage", error);
+    }
+  }, [lenses]);
+
   const filteredLenses = useMemo(() => {
     return lenses.filter(lens => {
       const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl } = filters;
@@ -100,8 +119,8 @@ export function DashboardPage() {
           const header = json[0] as string[];
           const propMap: { [key: string]: number } = {};
           header.forEach((h, i) => {
-            const propName = h === 'F. No.' ? 'fNo' : h;
-            if (LENS_PROPERTIES.includes(propName as any)) {
+            const propName = h === 'F. No.' ? 'fNo' : LENS_PROPERTIES.find(p => p.toLowerCase() === h.toLowerCase());
+            if (propName) {
               propMap[propName] = i;
             }
           });
@@ -121,7 +140,6 @@ export function DashboardPage() {
               }
             }
 
-            // Ensure all numeric properties have a value
             for (const prop of NUMERIC_PROPERTIES) {
                 if (lensData[prop] === undefined) {
                     (lensData as any)[prop] = 0;
@@ -134,17 +152,35 @@ export function DashboardPage() {
             } as Lens;
 
           }).filter(lens => lens.name && typeof lens.name === 'string');
+          
+          setLenses(currentLenses => {
+            const updatedLenses = [...currentLenses];
+            let addedCount = 0;
+            let updatedCount = 0;
 
-          // Replace existing lenses with imported ones
-          setLenses(importedLenses);
+            importedLenses.forEach(newLens => {
+              const existingIndex = updatedLenses.findIndex(l => l.name === newLens.name);
+              if (existingIndex !== -1) {
+                // Update existing lens, but keep original ID
+                updatedLenses[existingIndex] = { ...newLens, id: updatedLenses[existingIndex].id };
+                updatedCount++;
+              } else {
+                // Add new lens
+                updatedLenses.push(newLens);
+                addedCount++;
+              }
+            });
 
-          toast({ title: 'Import Successful', description: `${importedLenses.length} new lenses processed.` });
+            toast({ title: 'Import Complete', description: `${addedCount} lenses added, ${updatedCount} lenses updated.` });
+            return updatedLenses;
+          });
+
         } catch (error) {
           console.error("Failed to import and parse file:", error);
           toast({
             variant: 'destructive',
             title: 'Import Failed',
-            description: 'Could not read or parse the file. Please ensure it has a header row.',
+            description: 'Could not read or parse the file. Please ensure it has a valid header row.',
           });
         }
       };
