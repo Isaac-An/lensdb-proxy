@@ -1,49 +1,56 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset defines access control for the 'products' and 'excel_imports' collections.
+ * @file Overview
+ * This ruleset is in prototyping mode and prioritizes strong authorization over strict schema validation.
  *
  * Core Philosophy:
- * The security model prioritizes simplicity and authorization independence through structural segregation.
+ * This ruleset focuses on securing access to product data and Excel import metadata.  It enforces a data segregation model
+ * where product data and import metadata are stored in separate collections with potentially different access control requirements.
+ * The current ruleset assumes all writes to both `products` and `excel_imports` are disallowed in this prototype mode.
  *
  * Data Structure:
- * - /products/{productId}: Stores product details. Intended for public read access, but requires authentication for writes.
- * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Restricted access.
+ * - /products/{productId}: Stores product details. Write access is currently denied.
+ * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Write access is currently denied.
  *
  * Key Security Decisions:
- * - Products: Public read access is allowed, but writes are disallowed.
- * - Excel Imports: Access to import metadata is denied to all users.
+ * - Write access is disabled on `products`.
+ * - Write access is disabled on `excel_imports`.
+ * - Listing of `products` is public to allow reading of lens specifications, but this should be updated in later iterations to prevent unwanted data scraping or misuse.
+ * - Listing of `excel_imports` is disallowed to hide potentially sensitive metadata about data imports.
+ *
+ * Denormalization for Authorization:
+ *  No denormalization is currently necessary, as write access is disabled.
+ *
+ * Structural Segregation:
+ *  The separation of `products` and `excel_imports` collections reflects a design decision to keep product data separate from import metadata, enabling different access control rules for each.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Defines read access to product documents.
+     * @description Controls read and write access to individual product documents.
      * @path /products/{productId}
-     * @allow (get, list) Allow any user to read product details.
-     * @deny (create, update, delete) Prevent any user from writing product details.
-     * @principle Allows public read access to products but prohibits modifications.
+     * @allow get, list: Anyone can read product details.
+     * @deny create, update, delete: No one can create, update, or delete product documents.
+     * @principle Public read, owner-only writes (writes are disabled in this prototype).
      */
     match /products/{productId} {
       allow get: if true;
       allow list: if true;
-
       allow create: if false;
       allow update: if false;
       allow delete: if false;
     }
 
     /**
-     * @description Restricts access to excel import metadata.
+     * @description Controls read and write access to Excel import metadata.
      * @path /excel_imports/{excelImportId}
-     * @allow None
-     * @deny (get, list, create, update, delete) Prevent all access to excel import documents.
-     * @principle Restricts all access to the excel_imports collection.
+     * @deny get, list, create, update, delete: No one can read or write Excel import metadata.
+     * @principle Strict owner-only access (access is disabled in this prototype).
      */
     match /excel_imports/{excelImportId} {
       allow get: if false;
       allow list: if false;
-
       allow create: if false;
       allow update: if false;
       allow delete: if false;
