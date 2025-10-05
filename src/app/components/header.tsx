@@ -9,12 +9,14 @@ type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  isImportDisabled?: boolean;
 };
 
 export function AppHeader({
   searchQuery,
   onSearchChange,
   onImport,
+  isImportDisabled = false,
 }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,9 +46,9 @@ export function AppHeader({
           </div>
         </form>
         <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleImportClick}>
+            <Button size="sm" onClick={handleImportClick} disabled={isImportDisabled}>
                 <FileInput />
-                Import
+                {isImportDisabled ? 'Authenticating...' : 'Import'}
             </Button>
             <input
               type="file"
@@ -54,6 +56,7 @@ export function AppHeader({
               onChange={onImport}
               className="hidden"
               accept=".xlsx, .xls, .csv"
+              disabled={isImportDisabled}
             />
         </div>
       </div>

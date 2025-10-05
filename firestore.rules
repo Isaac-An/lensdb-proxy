@@ -1,41 +1,42 @@
 /**
- * @file Firestore Security Rules
- * @core_philosophy This ruleset enforces public read access for lens products, allowing anyone to retrieve product information. Writes (create, update, delete) are disallowed, effectively making the product catalog read-only. Access to Excel import metadata is completely denied, reflecting a decision to restrict access to this administrative data.
- * @data_structure
- *   - `/products/{productId}`: Stores lens product information.
- *   - `/excel_imports/{excelImportId}`: Stores metadata about Excel imports (filename, upload date, record count).
- * @key_security_decisions
- *   - Lens product data is publicly readable, but writes are disabled to maintain catalog integrity.
- *   - Access to Excel import metadata is completely denied, likely to prevent unauthorized access to administrative data.
- *   - No user-specific data is stored, simplifying the access control model.
+ * @description This ruleset defines access control for product data and Excel import metadata. It prioritizes structural segregation to maintain clear and independent security postures for different types of data. All write operations are forbidden in this prototyping phase.
+ * @dataStructure
+ * - `/products/{productId}`: Stores product details. Intended to be publicly readable.
+ * - `/excel_imports/{excelImportId}`: Stores metadata about Excel imports. Intended to be only writable by authenticated users.
+ * @keySecurityDecisions
+ * - Public Read Access for Products: The `products` collection is publicly readable to facilitate open access to product information.
+ * - No Write Access: All write operations (create, update, delete) are currently disabled to focus on secure data retrieval. Write operations will be enabled once the authorization method is determined.
+ * - Structural Segregation: The separation of product data and import metadata allows for distinct access control policies, which is essential for maintaining data integrity and security.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows anyone to read lens product information but disallows any writes.
+     * @description Allows public read access to product details, but disallows any write operations.
      * @path /products/{productId}
-     * @allow (get, list) Anyone can retrieve product data.
-     * @deny (create, update, delete) No one can create, update, or delete product data.
-     * @principle Products are publicly readable, but writes are forbidden.
+     * @allow (get, list): Any user (or no user) can read product data.
+     * @deny (create, update, delete): No one can create, update, or delete product data.
+     * @principle Public read access for product data.
      */
     match /products/{productId} {
-      allow get, list: if true;
+      allow get: if true;
+      allow list: if true;
       allow create: if false;
       allow update: if false;
       allow delete: if false;
     }
 
     /**
-     * @description Denies all access to Excel import metadata.
+     * @description Restricts access to Excel import metadata. No read or write operations are allowed for prototyping.
      * @path /excel_imports/{excelImportId}
-     * @allow None. No one can access Excel import metadata.
-     * @deny (get, list, create, update, delete) All requests are denied.
-     * @principle Restricts access to potentially sensitive administrative data.
+     * @allow None
+     * @deny (get, list, create, update, delete): All operations are denied.
+     * @principle No access granted during the prototyping phase.
      */
     match /excel_imports/{excelImportId} {
-      allow get, list: if false;
+      allow get: if false;
+      allow list: if false;
       allow create: if false;
       allow update: if false;
       allow delete: if false;

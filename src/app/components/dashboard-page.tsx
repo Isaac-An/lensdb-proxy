@@ -9,7 +9,7 @@ import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
-import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError, useUser } from '@/firebase';
 import { collection, writeBatch, doc, getDocs, DocumentData } from 'firebase/firestore';
 
 export type Filters = {
@@ -87,6 +87,8 @@ export function DashboardPage() {
   const { toast } = useToast();
 
   const firestore = useFirestore();
+  const { isUserLoading } = useUser();
+
   const productsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'products');
@@ -162,18 +164,24 @@ export function DashboardPage() {
             };
 
             for (const excelKey of excelKeys) {
-              const lowerKey = excelKey.toLowerCase().trim();
-              const firestoreKey = keyMap[lowerKey] || excelKey;
-              
-              if (LENS_PROPERTIES.includes(firestoreKey as any)) {
-                let value = row[excelKey];
-                if (NUMERIC_PROPERTIES.includes(firestoreKey as any)) {
-                  value = parseFloat(value);
-                  if (isNaN(value)) value = 0;
+                const lowerKey = excelKey.toLowerCase().trim();
+                let firestoreKey = lowerKey.replace(/[^a-zA-Z0-9]/g, '');
+                
+                // Use the map for specific conversions
+                if (keyMap[lowerKey]) {
+                    firestoreKey = keyMap[lowerKey];
                 }
-                lensData[firestoreKey] = value;
-              }
+
+                if ([...LENS_PROPERTIES, 'fovDiagonal', 'fovHorizontal', 'fovVertical'].includes(firestoreKey as any)) {
+                    let value = row[excelKey];
+                    if (NUMERIC_PROPERTIES.includes(firestoreKey as any)) {
+                        value = parseFloat(value);
+                        if (isNaN(value)) value = 0;
+                    }
+                    lensData[firestoreKey] = value;
+                }
             }
+
 
             // Ensure all properties exist, providing defaults
             LENS_PROPERTIES.forEach(prop => {
@@ -194,36 +202,35 @@ export function DashboardPage() {
             return;
           }
           
-          const batch = writeBatch(firestore);
+          try {
+            const batch = writeBatch(firestore);
 
-          const existingDocs = await getDocs(productsCollection);
-          existingDocs.forEach(doc => {
-            batch.delete(doc.ref);
-          });
-          
-          importedLenses.forEach(newLens => {
-            const newDocRef = doc(productsCollection);
-            batch.set(newDocRef, newLens);
-          });
-          
-          batch.commit()
-            .then(() => {
-                toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
-            })
-            .catch((error) => {
-                // Simplified error handling
-                const permissionError = new FirestorePermissionError({
-                    path: productsCollection.path,
-                    operation: 'write'
-                });
-                errorEmitter.emit('permission-error', permissionError);
-                toast({
-                    variant: 'destructive',
-                    title: 'Import Failed',
-                    description: 'Could not save to database due to permissions.',
-                  });
+            const existingDocs = await getDocs(productsCollection);
+            existingDocs.forEach(doc => {
+              batch.delete(doc.ref);
             });
+            
+            importedLenses.forEach(newLens => {
+              const newDocRef = doc(productsCollection);
+              batch.set(newDocRef, newLens);
+            });
+            
+            await batch.commit()
+            toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
 
+          } catch (error) {
+              console.error("Import failed:", error);
+              const permissionError = new FirestorePermissionError({
+                  path: productsCollection.path,
+                  operation: 'write'
+              });
+              errorEmitter.emit('permission-error', permissionError);
+              toast({
+                  variant: 'destructive',
+                  title: 'Import Failed',
+                  description: 'Could not save to database. Check permissions.',
+                });
+          }
       };
       reader.readAsArrayBuffer(file);
     }
@@ -246,9 +253,10 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
           onImport={handleImport}
+          isImportDisabled={isUserLoading}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} />
+            <ProductList lenses={filteredLenses} isLoading={isLoading || isUserLoading} onSelectLens={handleSelectLens} />
         </main>
       </div>
 
