@@ -93,26 +93,22 @@ export function DashboardPage() {
           }
 
           const header = json[0] as string[];
-          const propMap: Record<string, number> = {};
-          LENS_PROPERTIES.forEach(prop => {
-            let index = header.indexOf(prop);
-            // Special handling for 'F. No.' header
-            if (prop === 'fNo' && index === -1) {
-              index = header.indexOf('F. No.');
-            }
-            if (index !== -1) {
-              propMap[prop] = index;
+          const propMap: { [key: string]: number } = {};
+          header.forEach((h, i) => {
+            const propName = h === 'F. No.' ? 'fNo' : h;
+            if (LENS_PROPERTIES.includes(propName as any)) {
+              propMap[propName] = i;
             }
           });
-
+          
           const importedLenses: Lens[] = json.slice(1).map((row: any[], index: number) => {
             const lensData: Partial<Lens> = {};
             for (const prop of LENS_PROPERTIES) {
               const colIndex = propMap[prop];
               if (colIndex !== undefined && row[colIndex] !== undefined) {
                  const value = row[colIndex];
-                 if (typeof (allLensesData[0] as any)[prop] === 'number' || prop === 'fNo' || prop === 'efl') {
-                    (lensData as any)[prop] = Number(value);
+                 if (typeof (allLensesData[0] as any)?.[prop] === 'number' || prop === 'fNo' || prop === 'efl' || prop === 'price') {
+                    (lensData as any)[prop] = Number(value) || 0;
                  } else {
                     (lensData as any)[prop] = value;
                  }
