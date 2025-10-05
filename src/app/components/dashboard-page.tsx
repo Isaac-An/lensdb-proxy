@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
 import type { Lens } from '@/app/lib/types';
 import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
@@ -78,7 +77,7 @@ function mapDocToLens(doc: DocumentData): Lens {
     }
   
     return lens as Lens;
-  }
+}
 
 export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -100,6 +99,13 @@ export function DashboardPage() {
     if (!rawLenses) return [];
     return rawLenses.map(doc => mapDocToLens({ id: doc.id, data: () => doc }));
   }, [rawLenses]);
+  
+  const { sensorSizes, mountTypes } = useMemo(() => {
+    if (!lenses) return { sensorSizes: [], mountTypes: [] };
+    const sensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))].sort();
+    const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
+    return { sensorSizes, mountTypes };
+  }, [lenses]);
 
   const filteredLenses = useMemo(() => {
     if (!lenses) return [];
@@ -252,8 +258,8 @@ export function DashboardPage() {
             filters={filters} 
             setFilters={setFilters} 
             resetFilters={() => setFilters(initialFilters)}
-            sensorSizes={SENSOR_SIZES}
-            mountTypes={MOUNT_TYPES}
+            sensorSizes={sensorSizes}
+            mountTypes={mountTypes}
           />
       </div>
       <div className="w-2/3 flex flex-col">
