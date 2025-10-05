@@ -39,8 +39,8 @@ export function ProductList({ lenses, isLoading, onSelectLens }: ProductListProp
   
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {lenses.map((lens, index) => (
-        <ProductCard key={lens.id} lens={lens} index={index} onSelectLens={onSelectLens} />
+      {lenses.map((lens) => (
+        <ProductCard key={lens.id} lens={lens} onSelectLens={onSelectLens} />
       ))}
     </div>
   );
