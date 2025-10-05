@@ -95,7 +95,11 @@ export function DashboardPage() {
           const header = json[0] as string[];
           const propMap: Record<string, number> = {};
           LENS_PROPERTIES.forEach(prop => {
-            const index = header.indexOf(prop);
+            let index = header.indexOf(prop);
+            // Special handling for 'F. No.' header
+            if (prop === 'fNo' && index === -1) {
+              index = header.indexOf('F. No.');
+            }
             if (index !== -1) {
               propMap[prop] = index;
             }
@@ -107,7 +111,7 @@ export function DashboardPage() {
               const colIndex = propMap[prop];
               if (colIndex !== undefined && row[colIndex] !== undefined) {
                  const value = row[colIndex];
-                 if (typeof (allLensesData[0] as any)[prop] === 'number') {
+                 if (typeof (allLensesData[0] as any)[prop] === 'number' || prop === 'fNo' || prop === 'efl') {
                     (lensData as any)[prop] = Number(value);
                  } else {
                     (lensData as any)[prop] = value;
@@ -122,12 +126,8 @@ export function DashboardPage() {
 
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
-
-          setLenses(prevLenses => {
-            const existingNames = new Set(prevLenses.map(l => l.name));
-            const newLenses = importedLenses.filter(l => !existingNames.has(l.name));
-            return [...prevLenses, ...newLenses];
-          });
+          // Replace existing lenses with imported ones
+          setLenses(importedLenses);
 
           toast({ title: 'Import Successful', description: `${importedLenses.length} new lenses processed.` });
         } catch (error) {
@@ -147,10 +147,18 @@ export function DashboardPage() {
   const handleExport = () => {
     const dataToExport = lenses.map(lens => {
       const { id, ...rest } = lens;
-      return rest;
+      const newRest: any = {...rest};
+      // Rename fNo to 'F. No.' for export
+      if ('fNo' in newRest) {
+        newRest['F. No.'] = newRest.fNo;
+        delete newRest.fNo;
+      }
+      return newRest;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: LENS_PROPERTIES });
+    const exportHeaders = LENS_PROPERTIES.map(prop => prop === 'fNo' ? 'F. No.' : prop);
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: exportHeaders });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Lenses');
     XLSX.writeFile(workbook, 'appleye_lenses.xlsx');
