@@ -2,21 +2,19 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileInput, Search, FileOutput } from 'lucide-react';
+import { FileInput, Search } from 'lucide-react';
 import React, { useRef } from 'react';
 
 type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onExport: () => void;
 };
 
 export function AppHeader({
   searchQuery,
   onSearchChange,
   onImport,
-  onExport,
 }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,10 +44,6 @@ export function AppHeader({
           </div>
         </form>
         <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onExport}>
-                <FileOutput />
-                Export
-            </Button>
             <Button size="sm" onClick={handleImportClick}>
                 <FileInput />
                 Import

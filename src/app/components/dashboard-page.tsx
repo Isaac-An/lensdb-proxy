@@ -153,28 +153,6 @@ export function DashboardPage() {
     event.target.value = '';
   };
 
-  const handleExport = () => {
-    const dataToExport = lenses.map(lens => {
-      const { id, ...rest } = lens;
-      const newRest: any = {...rest};
-      // Rename fNo to 'F. No.' for export
-      if ('fNo' in newRest) {
-        newRest['F. No.'] = newRest.fNo;
-        delete newRest.fNo;
-      }
-      return newRest;
-    });
-
-    const exportHeaders = LENS_PROPERTIES.map(prop => prop === 'fNo' ? 'F. No.' : prop);
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: exportHeaders });
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Lenses');
-    XLSX.writeFile(workbook, 'appleye_lenses.xlsx');
-    toast({ title: 'Export Successful', description: 'Lenses exported to appleye_lenses.xlsx' });
-  };
-
-
   return (
     <div className="flex h-screen bg-background">
       <div className="w-1/3 border-r">
@@ -191,7 +169,6 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
           onImport={handleImport}
-          onExport={handleExport}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <ProductList lenses={filteredLenses} onSelectLens={handleSelectLens} />
