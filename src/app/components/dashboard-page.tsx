@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useTransition } from 'react';
+import React, { useState, useMemo } from 'react';
 import { lenses as allLensesData, SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
 import type { Lens } from '@/app/lib/types';
 import {
@@ -11,8 +11,6 @@ import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
 import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
-import { getAIInsights } from '../actions';
-import { AiInsightsDialog } from './ai-insights-dialog';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 
@@ -41,9 +39,6 @@ export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
-  const [isAiInsightOpen, setAiInsightOpen] = useState(false);
-  const [aiInsight, setAiInsight] = useState('');
-  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   
   const filteredLenses = useMemo(() => {
@@ -75,22 +70,6 @@ export function DashboardPage() {
   const handleSelectLens = (lens: Lens) => {
     setSelectedLens(lens);
     setDetailsOpen(true);
-  };
-  
-  const handleGenerateInsights = () => {
-    startTransition(async () => {
-      const result = await getAIInsights(filteredLenses);
-      if ('error' in result) {
-        toast({
-          variant: 'destructive',
-          title: 'Error Generating Insights',
-          description: result.error,
-        });
-      } else {
-        setAiInsight(result.insights);
-        setAiInsightOpen(true);
-      }
-    });
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,10 +117,6 @@ export function DashboardPage() {
     event.target.value = '';
   };
 
-  const handleUpload = () => {
-    toast({ title: 'Feature in development', description: 'Excel upload will be available soon.' });
-  }
-
   return (
     <SidebarProvider>
       <FilterSidebar 
@@ -156,10 +131,7 @@ export function DashboardPage() {
             <AppHeader
               searchQuery={filters.searchQuery}
               onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
-              onGenerateInsights={handleGenerateInsights}
-              isGeneratingInsights={isPending}
               onImport={handleImport}
-              onUpload={handleUpload}
             />
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                 <ProductList lenses={filteredLenses} onSelectLens={handleSelectLens} />
@@ -175,11 +147,6 @@ export function DashboardPage() {
         />
       )}
       
-      <AiInsightsDialog
-        open={isAiInsightOpen}
-        onOpenChange={setAiInsightOpen}
-        insights={aiInsight}
-      />
     </SidebarProvider>
   );
 }

@@ -5,25 +5,19 @@ import { Input } from '@/components/ui/input';
 import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
-import { FileInput, Loader2, Search, Sparkles, Upload } from 'lucide-react';
+import { FileInput, Search } from 'lucide-react';
 import React, { useRef } from 'react';
 
 type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onGenerateInsights: () => void;
-  isGeneratingInsights: boolean;
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onUpload: () => void;
 };
 
 export function AppHeader({
   searchQuery,
   onSearchChange,
-  onGenerateInsights,
-  isGeneratingInsights,
   onImport,
-  onUpload
 }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,8 +47,8 @@ export function AppHeader({
             />
           </div>
         </form>
-        <div className="hidden md:flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleImportClick}>
+        <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleImportClick}>
                 <FileInput />
                 Import
             </Button>
@@ -65,19 +59,7 @@ export function AppHeader({
               className="hidden"
               accept=".xlsx, .xls, .csv"
             />
-            <Button variant="outline" size="sm" onClick={onUpload}>
-                <Upload />
-                Upload
-            </Button>
         </div>
-        <Button size="sm" onClick={onGenerateInsights} disabled={isGeneratingInsights}>
-          {isGeneratingInsights ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <Sparkles />
-          )}
-          Generate Insights
-        </Button>
       </div>
     </header>
   );
