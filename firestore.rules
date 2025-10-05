@@ -1,68 +1,44 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a public read, owner-write model for products and a locked-down owner-only write model for Excel import metadata.
- * @dataStructure
- * - /products/{productId}: Stores product details. Publicly readable, but only writeable by authenticated users.
- * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Writeable only by authenticated users.
- * @keySecurityDecisions
- * - Products are publicly readable to support open access to the product catalog.
- * - Excel import metadata is restricted to authenticated users to protect import history.
- * - Data validation is limited to ownership checks and relational integrity.
+ * @core_philosophy This ruleset enforces public read access for lens products, allowing anyone to retrieve product information. Writes (create, update, delete) are disallowed, effectively making the product catalog read-only. Access to Excel import metadata is completely denied, reflecting a decision to restrict access to this administrative data.
+ * @data_structure
+ *   - `/products/{productId}`: Stores lens product information.
+ *   - `/excel_imports/{excelImportId}`: Stores metadata about Excel imports (filename, upload date, record count).
+ * @key_security_decisions
+ *   - Lens product data is publicly readable, but writes are disabled to maintain catalog integrity.
+ *   - Access to Excel import metadata is completely denied, likely to prevent unauthorized access to administrative data.
+ *   - No user-specific data is stored, simplifying the access control model.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to product information while restricting write access to authenticated users.
+     * @description Allows anyone to read lens product information but disallows any writes.
      * @path /products/{productId}
-     * @allow (get, list): Any user can read product details.
-     * @allow (create): Authenticated user can create a product. The `id` of the new document is validated to match the productId parameter.
-     * @allow (update, delete): Authenticated user can update or delete a product if they are the owner (creator) of the product.
-     * @deny (create): Non-authenticated user attempts to create a product.
-     * @deny (update, delete): Non-authenticated user attempts to update or delete a product.
-     * @deny (create): Authenticated user attempts to create a product with a mismatched `id`.
-     * @deny (update): Authenticated user attempts to modify the immutable `id` field.
-     * @principle Allows public read access but restricts write access to authenticated users.
+     * @allow (get, list) Anyone can retrieve product data.
+     * @deny (create, update, delete) No one can create, update, or delete product data.
+     * @principle Products are publicly readable, but writes are forbidden.
      */
     match /products/{productId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Restricts read and write access to excel import metadata to authenticated users.
+     * @description Denies all access to Excel import metadata.
      * @path /excel_imports/{excelImportId}
-     * @allow (create): Authenticated user can create an import record, and recordId is validated to match the excelImportId parameter.
-     * @allow (update, delete): Authenticated user can update or delete an import record, and excel import must exist.
-     * @deny (get, list): Attempts to read excel import metadata.
-     * @deny (create): Non-authenticated user attempts to create an import record.
-     * @deny (update, delete): Non-authenticated user attempts to update or delete an import record.
-     * @deny (create): Authenticated user attempts to create an import record with a mismatched `id`.
-     * @deny (update): Authenticated user attempts to modify the immutable `id` field.
-     * @principle Enforces authenticated-user-only write access for excel import metadata.
+     * @allow None. No one can access Excel import metadata.
+     * @deny (get, list, create, update, delete) All requests are denied.
+     * @principle Restricts access to potentially sensitive administrative data.
      */
     match /excel_imports/{excelImportId} {
-      allow get: if false;
-      allow list: if false;
-
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-
-    // ------ Helper functions ------
-
-    /**
-     * @description Checks if the user is signed in.
-     * @return {bool} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
+      allow get, list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
