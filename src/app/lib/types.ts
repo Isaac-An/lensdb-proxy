@@ -12,6 +12,6 @@ export interface Lens {
   tvDistortion: number;
   relativeIllumination: number;
   chiefRayAngle: number;
-  mountType: 'C-Mount' | 'CS-Mount' | 'M12' | 'Custom';
+  mountType: string;
   lensStructure: string;
 }

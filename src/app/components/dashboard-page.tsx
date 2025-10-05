@@ -10,7 +10,7 @@ import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, DocumentData } from 'firebase/firestore';
 
 export type Filters = {
   searchQuery: string;
@@ -38,11 +38,47 @@ const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
   'chiefRayAngle', 'mountType', 'lensStructure'
 ];
 
+const DB_TO_LENS_PROP_MAP: { [key: string]: keyof Lens } = {
+  'fovDiagonal': 'fovD',
+  'fovHorizontal': 'fovH',
+  'fovVertical': 'fovV',
+};
+
 const NUMERIC_PROPERTIES: (keyof Lens)[] = [
     'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
     'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle'
 ];
 
+function mapDocToLens(doc: DocumentData): Lens {
+    const data = doc.data();
+    const lens: Partial<Lens> = { id: doc.id };
+  
+    for (const key in data) {
+      const mappedKey = DB_TO_LENS_PROP_MAP[key] || key;
+      if (LENS_PROPERTIES.includes(mappedKey as any)) {
+        let value = data[key];
+        if (NUMERIC_PROPERTIES.includes(mappedKey as any)) {
+          value = typeof value === 'string' ? parseFloat(value) : value;
+          if (isNaN(value) || value === null || value === undefined) {
+            value = 0;
+          }
+        }
+        (lens as any)[mappedKey] = value;
+      }
+    }
+  
+    for (const prop of LENS_PROPERTIES) {
+        if (lens[prop] === undefined) {
+            if (NUMERIC_PROPERTIES.includes(prop)) {
+                (lens as any)[prop] = 0;
+            } else {
+                (lens as any)[prop] = '';
+            }
+        }
+    }
+  
+    return lens as Lens;
+  }
 
 export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -52,7 +88,12 @@ export function DashboardPage() {
 
   const firestore = useFirestore();
   const productsCollection = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
-  const { data: lenses, isLoading } = useCollection<Lens>(productsCollection);
+  const { data: rawLenses, isLoading } = useCollection<DocumentData>(productsCollection);
+
+  const lenses = useMemo(() => {
+    if (!rawLenses) return [];
+    return rawLenses.map(doc => mapDocToLens({ id: doc.id, data: () => doc }));
+  }, [rawLenses]);
 
   const filteredLenses = useMemo(() => {
     if (!lenses) return [];
@@ -98,41 +139,53 @@ export function DashboardPage() {
           const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
           const header = json[0] as string[];
-          const propMap: { [key: string]: number } = {};
+          const propMap: { [key: string]: { index: number, dbKey: string } } = {};
+          
           header.forEach((h, i) => {
-              const lowerH = h.toLowerCase();
-              if (lowerH === 'f. no.') {
-                propMap['fNo'] = i;
-              } else {
+              const lowerH = h.toLowerCase().trim();
+              let dbKey: string | undefined;
+              if (lowerH === 'f. no.') dbKey = 'fNo';
+              else if (lowerH === 'fov - diagonal') dbKey = 'fovDiagonal';
+              else if (lowerH === 'fov - horizontal') dbKey = 'fovHorizontal';
+              else if (lowerH === 'fov - vertical') dbKey = 'fovVertical';
+              else {
                 const propName = LENS_PROPERTIES.find(p => p.toLowerCase() === lowerH);
-                if (propName) {
-                    propMap[propName] = i;
-                }
+                if (propName) dbKey = propName;
+              }
+            
+              if (dbKey) {
+                propMap[dbKey] = { index: i, dbKey };
               }
           });
 
-          const importedLenses: Omit<Lens, 'id'>[] = json.slice(1).map((row: any[]) => {
-            const lensData: Partial<Omit<Lens, 'id'>> = {};
-            for (const prop of LENS_PROPERTIES) {
-                const colIndex = propMap[prop as keyof typeof propMap];
-                if (colIndex !== undefined && row[colIndex] !== undefined && row[colIndex] !== null) {
-                    const value = row[colIndex];
-                    if (NUMERIC_PROPERTIES.includes(prop as any)) {
+          const importedLenses: DocumentData[] = json.slice(1).map((row: any[]) => {
+            const lensData: { [key: string]: any } = {};
+            for (const key in propMap) {
+                const { index, dbKey } = propMap[key];
+                if (row[index] !== undefined && row[index] !== null) {
+                    const value = row[index];
+                    const lensPropKey = DB_TO_LENS_PROP_MAP[dbKey] || dbKey;
+
+                    if (NUMERIC_PROPERTIES.includes(lensPropKey as any)) {
                         const numValue = parseFloat(String(value));
-                        (lensData as any)[prop] = isNaN(numValue) ? 0 : numValue;
+                        lensData[dbKey] = isNaN(numValue) ? 0 : numValue;
                     } else {
-                        (lensData as any)[prop] = String(value);
+                        lensData[dbKey] = String(value);
                     }
                 }
             }
 
-            for (const prop of NUMERIC_PROPERTIES) {
-                if (lensData[prop] === undefined) {
-                    (lensData as any)[prop] = 0;
-                }
+            for (const prop of LENS_PROPERTIES) {
+              const dbKey = Object.keys(DB_TO_LENS_PROP_MAP).find(k => DB_TO_LENS_PROP_MAP[k] === prop) || prop;
+              if (lensData[dbKey] === undefined) {
+                  if (NUMERIC_PROPERTIES.includes(prop)) {
+                      lensData[dbKey] = 0;
+                  } else {
+                      lensData[dbKey] = '';
+                  }
+              }
             }
-            return lensData as Omit<Lens, 'id'>;
-
+            return lensData;
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
           if (importedLenses.length === 0) {
@@ -146,18 +199,19 @@ export function DashboardPage() {
           
           const batch = writeBatch(firestore);
 
-          // Clear existing lenses
           const existingDocs = await getDocs(productsCollection);
           existingDocs.forEach(doc => {
             batch.delete(doc.ref);
           });
           
           let addedCount = 0;
-          const allLensesForError = importedLenses.map(newLens => {
+          const allLensesForError: {path: string, data: DocumentData}[] = [];
+          
+          importedLenses.forEach(newLens => {
             const newDocRef = doc(productsCollection);
             batch.set(newDocRef, newLens);
             addedCount++;
-            return { path: newDocRef.path, data: newLens };
+            allLensesForError.push({ path: newDocRef.path, data: newLens });
           });
           
           batch.commit()
