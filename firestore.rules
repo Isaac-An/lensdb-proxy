@@ -1,51 +1,59 @@
 /**
- * @fileOverview Firestore Security Rules for the lens product database.
+ * @file Overview
+ * This ruleset is in prototyping mode and prioritizes strong authorization over strict schema validation.
  *
  * Core Philosophy:
- * This ruleset focuses on providing open read access to product information
- * while restricting write access to authorized users (currently disabled in this prototype).
- * The data structure segregates product data and Excel import metadata to support
- * different access control needs.
+ * This ruleset focuses on securing access to product data and Excel import metadata.  It enforces a data segregation model
+ * where product data and import metadata are stored in separate collections with potentially different access control requirements.
+ * The current ruleset assumes all writes to both `products` and `excel_imports` are disallowed in this prototype mode.
  *
  * Data Structure:
- * - /products/{productId}: Stores lens product details.
- * - /excel_imports/{excelImportId}: Stores metadata about Excel imports.
+ * - /products/{productId}: Stores product details. Write access is currently denied.
+ * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Write access is currently denied.
  *
  * Key Security Decisions:
- * - Product listing is public.
- * - Write operations are currently disabled but are stubbed out for future authorization logic.
- * - No user-specific data is stored, so ownership models are not currently implemented.
+ * - Write access is disabled on `products`.
+ * - Write access is disabled on `excel_imports`.
+ * - Listing of `products` is public to allow reading of lens specifications, but this should be updated in later iterations to prevent unwanted data scraping or misuse.
+ * - Listing of `excel_imports` is disallowed to hide potentially sensitive metadata about data imports.
  *
- * Future considerations:
- * - The rules are structured to support the addition of user roles or more granular
- *   access controls in the future.
+ * Denormalization for Authorization:
+ *  No denormalization is currently necessary, as write access is disabled.
+ *
+ * Structural Segregation:
+ *  The separation of `products` and `excel_imports` collections reflects a design decision to keep product data separate from import metadata, enabling different access control rules for each.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to product information. Write access is currently disabled.
+     * @description Controls read and write access to individual product documents.
      * @path /products/{productId}
-     * @allow (get, list): Any user can read product data.
-     * @deny (create, update, delete): No one can write data (currently disabled, future auth will be added).
-     * @principle Provides public read access to product information.
+     * @allow get, list: Anyone can read product details.
+     * @deny create, update, delete: No one can create, update, or delete product documents.
+     * @principle Public read, owner-only writes (writes are disabled in this prototype).
      */
     match /products/{productId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add authorization for product creation/modification
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Allows read access to excel import metadata. Write access is disabled.
+     * @description Controls read and write access to Excel import metadata.
      * @path /excel_imports/{excelImportId}
-     * @allow (get, list): Any user can read excel import metadata.
-     * @deny (create, update, delete): No one can write excel import metadata (disabled, future admin role).
-     * @principle Restricts access to excel import metadata.
+     * @deny get, list, create, update, delete: No one can read or write Excel import metadata.
+     * @principle Strict owner-only access (access is disabled in this prototype).
      */
     match /excel_imports/{excelImportId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add authorization for excel import creation/modification (admin role?)
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
