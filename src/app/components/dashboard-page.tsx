@@ -30,6 +30,13 @@ const initialFilters: Filters = {
   ttl: [null, null],
 };
 
+const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
+  'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
+  'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
+  'chiefRayAngle', 'mountType', 'lensStructure', 'price'
+];
+
+
 export function DashboardPage() {
   const [lenses, setLenses] = useState<Lens[]>(allLensesData);
   const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -78,42 +85,57 @@ export function DashboardPage() {
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
           let maxId = 0;
           if(lenses && lenses.length > 0){
-            maxId = Math.max(...lenses.map(l => parseInt(l.id.split('-')[1])));
+            maxId = Math.max(...lenses.map(l => parseInt(l.id.split('-')[1])).filter(id => !isNaN(id)));
           }
 
-          const importedLenses: Lens[] = json.map((row: any, index: number) => ({
-            ...row,
-            id: `AL-${String(maxId + index + 1).padStart(3, '0')}`,
-            efl: Number(row.efl),
-            maxImageCircle: Number(row.maxImageCircle),
-            fNo: Number(row.fNo),
-            fovD: Number(row.fovD),
-            fovH: Number(row.fovH),
-            fovV: Number(row.fovV),
-            ttl: Number(row.ttl),
-            tvDistortion: Number(row.tvDistortion),
-            relativeIllumination: Number(row.relativeIllumination),
-            chiefRayAngle: Number(row.chiefRayAngle),
-            price: Number(row.price),
-          })).filter(lens => lens.name);
+          const header = json[0] as string[];
+          const propMap: Record<string, number> = {};
+          LENS_PROPERTIES.forEach(prop => {
+            const index = header.indexOf(prop);
+            if (index !== -1) {
+              propMap[prop] = index;
+            }
+          });
+
+          const importedLenses: Lens[] = json.slice(1).map((row: any[], index: number) => {
+            const lensData: Partial<Lens> = {};
+            for (const prop of LENS_PROPERTIES) {
+              const colIndex = propMap[prop];
+              if (colIndex !== undefined && row[colIndex] !== undefined) {
+                 const value = row[colIndex];
+                 if (typeof (allLensesData[0] as any)[prop] === 'number') {
+                    (lensData as any)[prop] = Number(value);
+                 } else {
+                    (lensData as any)[prop] = value;
+                 }
+              }
+            }
+            
+            return {
+              ...lensData,
+              id: `AL-${String(maxId + index + 1).padStart(3, '0')}`,
+            } as Lens;
+
+          }).filter(lens => lens.name && typeof lens.name === 'string');
+
 
           setLenses(prevLenses => {
-            const existingIds = new Set(prevLenses.map(l => l.id));
-            const newLenses = importedLenses.filter(l => !existingIds.has(l.id));
+            const existingNames = new Set(prevLenses.map(l => l.name));
+            const newLenses = importedLenses.filter(l => !existingNames.has(l.name));
             return [...prevLenses, ...newLenses];
           });
 
-          toast({ title: 'Import Successful', description: `${importedLenses.length} lenses processed.` });
+          toast({ title: 'Import Successful', description: `${importedLenses.length} new lenses processed.` });
         } catch (error) {
           console.error("Failed to import and parse file:", error);
           toast({
             variant: 'destructive',
             title: 'Import Failed',
-            description: 'Could not read or parse the file. Please ensure it is a valid Excel/CSV file.',
+            description: 'Could not read or parse the file. Please ensure it has a header row.',
           });
         }
       };
@@ -121,6 +143,20 @@ export function DashboardPage() {
     }
     event.target.value = '';
   };
+
+  const handleExport = () => {
+    const dataToExport = lenses.map(lens => {
+      const { id, ...rest } = lens;
+      return rest;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: LENS_PROPERTIES });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Lenses');
+    XLSX.writeFile(workbook, 'appleye_lenses.xlsx');
+    toast({ title: 'Export Successful', description: 'Lenses exported to appleye_lenses.xlsx' });
+  };
+
 
   return (
     <div className="flex h-screen bg-background">
@@ -138,6 +174,7 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
           onImport={handleImport}
+          onExport={handleExport}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <ProductList lenses={filteredLenses} onSelectLens={handleSelectLens} />
