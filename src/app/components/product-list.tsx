@@ -7,16 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 type ProductListProps = {
   lenses: Lens[];
+  isLoading: boolean;
   onSelectLens: (lens: Lens) => void;
 };
 
-export function ProductList({ lenses, onSelectLens }: ProductListProps) {
-  const [isMounted, setIsMounted] = React.useState(false);
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
+export function ProductList({ lenses, isLoading, onSelectLens }: ProductListProps) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -36,7 +32,7 @@ export function ProductList({ lenses, onSelectLens }: ProductListProps) {
     return (
       <div className="flex flex-col items-center justify-center text-center h-full">
         <h3 className="text-2xl font-bold tracking-tight">No Lenses Found</h3>
-        <p className="text-muted-foreground">Try adjusting your search or filter criteria.</p>
+        <p className="text-muted-foreground">Try adjusting your search or filter criteria, or import an Excel file.</p>
       </div>
     );
   }

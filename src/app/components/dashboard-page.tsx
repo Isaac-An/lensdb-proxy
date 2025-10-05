@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { SENSOR_SIZES, MOUNT_TYPES } from '@/app/lib/data';
 import type { Lens } from '@/app/lib/types';
 import { FilterSidebar } from './filter-sidebar';
@@ -9,6 +9,8 @@ import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore';
 
 export type Filters = {
   searchQuery: string;
@@ -43,32 +45,17 @@ const NUMERIC_PROPERTIES: (keyof Lens)[] = [
 
 
 export function DashboardPage() {
-  const [lenses, setLenses] = useState<Lens[]>([]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const { toast } = useToast();
-  
-  useEffect(() => {
-    try {
-      const storedLenses = localStorage.getItem('appleye-lenses');
-      if (storedLenses) {
-        setLenses(JSON.parse(storedLenses));
-      }
-    } catch (error) {
-      console.error("Failed to load lenses from localStorage", error);
-    }
-  }, []);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('appleye-lenses', JSON.stringify(lenses));
-    } catch (error) {
-      console.error("Failed to save lenses to localStorage", error);
-    }
-  }, [lenses]);
+  const firestore = useFirestore();
+  const productsCollection = useMemoFirebase(() => collection(firestore, 'products'), [firestore]);
+  const { data: lenses, isLoading } = useCollection<Lens>(productsCollection);
 
   const filteredLenses = useMemo(() => {
+    if (!lenses) return [];
     return lenses.filter(lens => {
       const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl } = filters;
       
@@ -103,7 +90,7 @@ export function DashboardPage() {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -111,11 +98,6 @@ export function DashboardPage() {
           const worksheet = workbook.Sheets[sheetName];
           const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
-          let maxId = 0;
-          if(lenses && lenses.length > 0){
-            maxId = Math.max(...lenses.map(l => parseInt(l.id.split('-')[1])).filter(id => !isNaN(id)));
-          }
-
           const header = json[0] as string[];
           const propMap: { [key: string]: number } = {};
           header.forEach((h, i) => {
@@ -124,20 +106,20 @@ export function DashboardPage() {
               propMap[propName] = i;
             }
           });
-          
-          const importedLenses: Lens[] = json.slice(1).map((row: any[], index: number) => {
-            const lensData: Partial<Lens> = {};
+
+          const importedLenses: Omit<Lens, 'id'>[] = json.slice(1).map((row: any[]) => {
+            const lensData: Partial<Omit<Lens, 'id'>> = {};
             for (const prop of LENS_PROPERTIES) {
-              const colIndex = propMap[prop];
-              if (colIndex !== undefined && row[colIndex] !== undefined && row[colIndex] !== null) {
-                 const value = row[colIndex];
-                  if (NUMERIC_PROPERTIES.includes(prop as any)) {
-                    const numValue = parseFloat(String(value));
-                    (lensData as any)[prop] = isNaN(numValue) ? 0 : numValue;
-                  } else {
-                    (lensData as any)[prop] = value;
-                  }
-              }
+                const colIndex = propMap[prop];
+                if (colIndex !== undefined && row[colIndex] !== undefined && row[colIndex] !== null) {
+                    const value = row[colIndex];
+                    if (NUMERIC_PROPERTIES.includes(prop as any)) {
+                        const numValue = parseFloat(String(value));
+                        (lensData as any)[prop] = isNaN(numValue) ? 0 : numValue;
+                    } else {
+                        (lensData as any)[prop] = value;
+                    }
+                }
             }
 
             for (const prop of NUMERIC_PROPERTIES) {
@@ -145,42 +127,44 @@ export function DashboardPage() {
                     (lensData as any)[prop] = 0;
                 }
             }
-            
-            return {
-              ...lensData,
-              id: `AL-${String(maxId + index + 1).padStart(3, '0')}`,
-            } as Lens;
+
+            return lensData as Omit<Lens, 'id'>;
 
           }).filter(lens => lens.name && typeof lens.name === 'string');
-          
-          setLenses(currentLenses => {
-            const updatedLenses = [...currentLenses];
-            let addedCount = 0;
-            let updatedCount = 0;
 
-            importedLenses.forEach(newLens => {
-              const existingIndex = updatedLenses.findIndex(l => l.name === newLens.name);
-              if (existingIndex !== -1) {
-                // Update existing lens, but keep original ID
-                updatedLenses[existingIndex] = { ...newLens, id: updatedLenses[existingIndex].id };
-                updatedCount++;
-              } else {
-                // Add new lens
-                updatedLenses.push(newLens);
-                addedCount++;
-              }
+          if (importedLenses.length === 0) {
+            toast({
+              variant: 'destructive',
+              title: 'Import Warning',
+              description: 'No valid lens data found in the file.',
             });
+            return;
+          }
+          
+          const batch = writeBatch(firestore);
 
-            toast({ title: 'Import Complete', description: `${addedCount} lenses added, ${updatedCount} lenses updated.` });
-            return updatedLenses;
+          // Clear existing lenses
+          const existingDocs = await getDocs(productsCollection);
+          existingDocs.forEach(doc => {
+            batch.delete(doc.ref);
           });
+          
+          let addedCount = 0;
+          importedLenses.forEach(newLens => {
+            const newDocRef = doc(productsCollection);
+            batch.set(newDocRef, newLens);
+            addedCount++;
+          });
+
+          await batch.commit();
+          toast({ title: 'Import Complete', description: `${addedCount} lenses imported successfully.` });
 
         } catch (error) {
           console.error("Failed to import and parse file:", error);
           toast({
             variant: 'destructive',
             title: 'Import Failed',
-            description: 'Could not read or parse the file. Please ensure it has a valid header row.',
+            description: 'Could not read, parse the file, or save to database.',
           });
         }
       };
@@ -207,7 +191,7 @@ export function DashboardPage() {
           onImport={handleImport}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <ProductList lenses={filteredLenses} onSelectLens={handleSelectLens} />
+            <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} />
         </main>
       </div>
 
