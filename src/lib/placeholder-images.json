@@ -2,74 +2,74 @@
   "placeholderImages": [
     {
       "id": "lens-1",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1582994254571-52c62d96ebab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-2",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1582994254571-52c62d96ebab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1599493393915-f604538a3582?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-3",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1600052525542-83a968651803?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-4",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1533746228171-962520811097?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1502920923511-2aa5a69f25a5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-5",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1594783761623-a910ffddede4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1619864503706-6a59d81b4919?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-6",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1720958371916-03809cae5cc5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwbGVuc3xlbnwwfHx8fDE3NTk2MjkwNTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1574979624992-20689f9232de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-7",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1580852300513-9b50125bf293?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1621243543166-3b7a5a8947b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-8",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1720958371916-03809cae5cc5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwbGVuc3xlbnwwfHx8fDE3NTk2MjkwNTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1616900223004-1b0333c1d34c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-9",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1727621170047-4b34851bf8b0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1565516335388-959829377488?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYW1lcmElMjBsZW5zJTIwZm9jdXNlZHxlbnwwfHx8fDE3NTk2MjkxODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-10",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1593704212686-6d52058fb516?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1500603720222-eb7a1f997356?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-11",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1720958371916-03809cae5cc5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwbGVuc3xlbnwwfHx8fDE3NTk2MjkwNTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1568819198303-423c92b23610?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMXx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     },
     {
       "id": "lens-12",
-      "description": "A modern camera lens",
-      "imageUrl": "https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc1OTYyOTA1M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "description": "A close-up of a camera lens",
+      "imageUrl": "https://images.unsplash.com/photo-1620356238322-b5b59a6a5d43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMnx8Y2FtZXJhJTIwbGVucyUyMGZvY3VzZWR8ZW58MHx8fHwxNzU5NjI5MTg2fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "camera lens"
     }
   ]
