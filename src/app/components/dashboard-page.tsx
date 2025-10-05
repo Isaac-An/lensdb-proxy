@@ -33,12 +33,12 @@ const initialFilters: Filters = {
 const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
   'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
   'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
-  'chiefRayAngle', 'mountType', 'lensStructure', 'price'
+  'chiefRayAngle', 'mountType', 'lensStructure'
 ];
 
 const NUMERIC_PROPERTIES: (keyof Lens)[] = [
     'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
-    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
+    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle'
 ];
 
 
@@ -110,10 +110,11 @@ export function DashboardPage() {
             const lensData: Partial<Lens> = {};
             for (const prop of LENS_PROPERTIES) {
               const colIndex = propMap[prop];
-              if (colIndex !== undefined && row[colIndex] !== undefined) {
+              if (colIndex !== undefined && row[colIndex] !== undefined && row[colIndex] !== null) {
                  const value = row[colIndex];
                   if (NUMERIC_PROPERTIES.includes(prop as any)) {
-                    (lensData as any)[prop] = Number(value) || 0;
+                    const numValue = parseFloat(String(value));
+                    (lensData as any)[prop] = isNaN(numValue) ? 0 : numValue;
                   } else {
                     (lensData as any)[prop] = value;
                   }

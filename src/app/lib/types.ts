@@ -14,5 +14,4 @@ export interface Lens {
   chiefRayAngle: number;
   mountType: 'C-Mount' | 'CS-Mount' | 'M12' | 'Custom';
   lensStructure: string;
-  price: number;
 }

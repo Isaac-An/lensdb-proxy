@@ -30,9 +30,8 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
           </SheetDescription>
         </SheetHeader>
         <div className="py-6 space-y-4">
-            <DetailItem label="Product ID" value={lens.id} />
-            <Separator />
             <DetailItem label="Sensor Size" value={lens.sensorSize} />
+            <Separator />
             <DetailItem label="Effective Focal Length (EFL)" value={`${lens.efl} mm`} />
             <DetailItem label="Max Image Circle" value={`${lens.maxImageCircle} mm`} />
             <DetailItem label="F. No." value={lens.fNo} />
@@ -47,8 +46,6 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             <Separator />
             <DetailItem label="Mount Type" value={lens.mountType} />
             <DetailItem label="Lens Structure" value={lens.lensStructure} />
-            <Separator />
-            <DetailItem label="Price" value={`$${(lens.price || 0).toFixed(2)}`} isPrimary />
         </div>
       </SheetContent>
     </Sheet>
