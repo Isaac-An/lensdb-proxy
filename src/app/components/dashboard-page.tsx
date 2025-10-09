@@ -9,7 +9,9 @@ import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError, useUser } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, DocumentData, query, where, deleteDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, DocumentData, updateDoc, DocumentReference } from 'firebase/firestore';
+import { UpdateConfirmationDialog, type LensForUpdate } from './update-confirmation-dialog';
+
 
 export type Filters = {
   searchQuery: string;
@@ -78,14 +80,14 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    const re = /(AE-(?:L)?M)(\d+)/i;
+    const re = /(?:AE-L?M)(\d+)/i;
     
     const aMatch = a.match(re);
     const bMatch = b.match(re);
 
     if (aMatch && bMatch) {
-        const aNum = parseInt(aMatch[2], 10);
-        const bNum = parseInt(bMatch[2], 10);
+        const aNum = parseInt(aMatch[1], 10);
+        const bNum = parseInt(bMatch[1], 10);
         if (aNum !== bNum) {
             return aNum - bNum;
         }
@@ -99,6 +101,8 @@ export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
+  const [lensesToUpdate, setLensesToUpdate] = useState<LensForUpdate[]>([]);
+  const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const { toast } = useToast();
 
   const firestore = useFirestore();
@@ -167,6 +171,35 @@ export function DashboardPage() {
     setSelectedLens(lens);
     setDetailsOpen(true);
   };
+  
+  const handleConfirmUpdate = async () => {
+    if (!firestore || lensesToUpdate.length === 0) return;
+  
+    const batch = writeBatch(firestore);
+    lensesToUpdate.forEach(item => {
+      const docRef = doc(firestore, 'products', item.id);
+      batch.update(docRef, item.newData);
+    });
+  
+    batch.commit()
+      .then(() => {
+        toast({
+          title: 'Update Complete',
+          description: `${lensesToUpdate.length} lens(es) updated successfully.`,
+        });
+      })
+      .catch((error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'products', // Simplified path for batch operation
+          operation: 'write',
+          requestResourceData: lensesToUpdate.map(l => l.newData)
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
+  
+    setUpdateConfirmOpen(false);
+    setLensesToUpdate([]);
+  };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -225,19 +258,6 @@ export function DashboardPage() {
                 (lensData as any)[firestoreKey] = value;
               }
             });
-
-            // Ensure all properties have a default value to prevent 'undefined' errors
-            const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
-            for (const prop of allLensKeys) {
-                if (lensData[prop] === undefined || lensData[prop] === null) {
-                    if (NUMERIC_PROPERTIES.includes(prop)) {
-                        (lensData as any)[prop] = 0;
-                    } else {
-                        (lensData as any)[prop] = '';
-                    }
-                }
-            }
-
             return lensData;
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
@@ -251,43 +271,94 @@ export function DashboardPage() {
           }
 
           const existingLensesSnapshot = await getDocs(productsCollection);
-          const existingLensNames = new Set(existingLensesSnapshot.docs.map(doc => doc.data().name));
+          const existingLensesMap = new Map(existingLensesSnapshot.docs.map(doc => [doc.data().name, { id: doc.id, ...doc.data() } as Lens]));
 
-          const newLenses = fileLenses.filter(lens => !existingLensNames.has(lens.name));
-          const duplicateCount = fileLenses.length - newLenses.length;
+          const newLenses: Partial<Lens>[] = [];
+          const duplicatesToUpdate: LensForUpdate[] = [];
 
-          if (newLenses.length === 0) {
-            toast({
-              title: 'Import Complete',
-              description: `No new lenses were added. ${duplicateCount} duplicate(s) found and skipped.`,
-            });
-            return;
+          for (const fileLens of fileLenses) {
+            const existingLens = existingLensesMap.get(fileLens.name!);
+            if (existingLens) {
+              const updateData: Partial<Lens> = {};
+              let needsUpdate = false;
+              for (const key in fileLens) {
+                const lensKey = key as keyof Lens;
+                const existingValue = existingLens[lensKey];
+                const newValue = fileLens[lensKey];
+
+                if (newValue !== undefined && newValue !== null) {
+                  const isExistingBlank = (typeof existingValue === 'string' && existingValue === '') || (typeof existingValue === 'number' && existingValue === 0);
+                  if (isExistingBlank) {
+                    (updateData as any)[lensKey] = newValue;
+                    needsUpdate = true;
+                  }
+                }
+              }
+
+              if (needsUpdate) {
+                duplicatesToUpdate.push({
+                  id: existingLens.id,
+                  name: existingLens.name,
+                  newData: updateData,
+                });
+              }
+            } else {
+              // Populate with default values before adding to prevent undefined fields
+              const completeLens: Partial<Lens> = {...fileLens};
+              const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
+              for (const prop of allLensKeys) {
+                  if (completeLens[prop] === undefined || completeLens[prop] === null) {
+                      if (NUMERIC_PROPERTIES.includes(prop)) {
+                          (completeLens as any)[prop] = 0;
+                      } else {
+                          (completeLens as any)[prop] = '';
+                      }
+                  }
+              }
+              newLenses.push(completeLens);
+            }
           }
 
-          const batch = writeBatch(firestore);
-          newLenses.forEach(newLens => {
-            const newDocRef = doc(productsCollection);
-            batch.set(newDocRef, newLens);
-          });
-          
-          batch.commit()
-            .then(() => {
-                let description = `${newLenses.length} new lens(es) imported successfully.`;
-                if (duplicateCount > 0) {
-                  description += ` ${duplicateCount} duplicate(s) were skipped.`;
-                }
-                toast({ 
-                  title: 'Import Complete', 
-                  description: description 
-                });
-            })
-            .catch((error) => {
+          const duplicateCount = fileLenses.length - newLenses.length - duplicatesToUpdate.length;
+
+          // Handle new lenses
+          if (newLenses.length > 0) {
+            const batch = writeBatch(firestore);
+            newLenses.forEach(newLens => {
+              const newDocRef = doc(productsCollection);
+              batch.set(newDocRef, newLens);
+            });
+            await batch.commit().catch((error) => {
               const permissionError = new FirestorePermissionError({
                   path: productsCollection.path,
                   operation: 'write',
                   requestResourceData: newLenses
               });
               errorEmitter.emit('permission-error', permissionError);
+            });
+          }
+
+          // Handle duplicates that can be updated
+          if (duplicatesToUpdate.length > 0) {
+            setLensesToUpdate(duplicatesToUpdate);
+            setUpdateConfirmOpen(true);
+          }
+
+          // Final toast message
+          let description = '';
+          if (newLenses.length > 0) {
+            description += `${newLenses.length} new lens(es) imported. `;
+          }
+          if (duplicateCount > 0) {
+            description += `${duplicateCount} duplicate(s) without new info were skipped. `;
+          }
+          if (duplicatesToUpdate.length === 0 && newLenses.length === 0) {
+            description = `No new lenses to import. ${duplicateCount > 0 ? duplicateCount + ' duplicate(s) found.' : ''}`;
+          }
+
+          toast({
+            title: 'Import Processed',
+            description: description.trim(),
           });
       };
       reader.readAsArrayBuffer(file);
@@ -325,9 +396,22 @@ export function DashboardPage() {
           onOpenChange={setDetailsOpen} 
         />
       )}
+
+      <UpdateConfirmationDialog
+        open={isUpdateConfirmOpen}
+        onOpenChange={setUpdateConfirmOpen}
+        lensesToUpdate={lensesToUpdate}
+        onConfirm={handleConfirmUpdate}
+        onCancel={() => {
+          setUpdateConfirmOpen(false);
+          setLensesToUpdate([]);
+          toast({
+            title: 'Update Canceled',
+            description: `${lensesToUpdate.length} lens(es) were not updated.`
+          })
+        }}
+      />
       
     </div>
   );
 }
-
-    
