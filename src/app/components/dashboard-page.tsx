@@ -31,15 +31,15 @@ const initialFilters: Filters = {
   ttl: [null, null],
 };
 
-const LENS_PROPERTIES: (keyof Omit<Lens, 'id'>)[] = [
-    'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
+const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name' | 'price'>)[] = [
+    'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
     'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
     'chiefRayAngle', 'mountType', 'lensStructure'
 ];
 
 const NUMERIC_PROPERTIES: (keyof Lens)[] = [
     'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
-    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle'
+    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
 ];
 
 function mapDocToLens(doc: DocumentData): Lens {
@@ -52,22 +52,16 @@ function mapDocToLens(doc: DocumentData): Lens {
       'fovVertical': 'fovV',
     };
 
+    // First, map all data from the document
     for (const key in data) {
       const mappedKey = propertyMapping[key] || key;
-      if (LENS_PROPERTIES.includes(mappedKey as any) || key === 'name') {
-        let value = data[key];
-        if (NUMERIC_PROPERTIES.includes(mappedKey as any)) {
-          value = typeof value === 'string' ? parseFloat(value) : value;
-          if (isNaN(value) || value === null || value === undefined) {
-            value = 0;
-          }
-        }
-        (lens as any)[mappedKey] = value;
-      }
+      (lens as any)[mappedKey] = data[key];
     }
-  
-    for (const prop of LENS_PROPERTIES) {
-        if ((lens as any)[prop] === undefined) {
+
+    // Then, ensure all required properties have a default value
+    const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
+    for (const prop of allLensKeys) {
+        if ((lens as any)[prop] === undefined || (lens as any)[prop] === null) {
             if (NUMERIC_PROPERTIES.includes(prop)) {
                 (lens as any)[prop] = 0;
             } else {
@@ -126,7 +120,7 @@ export function DashboardPage() {
       if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
       if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
       if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fovD[1] !== null && lens.fovD > fovD[1]) return false;
+      if (fovD[1] !== null && lens.fovD > fNo[1]) return false;
       if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
       if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
       
@@ -169,7 +163,7 @@ export function DashboardPage() {
             eflmm: 'efl', efl: 'efl',
             maximagecirclemm: 'maxImageCircle', maximagecircle: 'maxImageCircle',
             fno: 'fNo', f: 'fNo',
-            fovdiagonal: 'fovD', fovd: 'fovD',
+            fovdiagonal: 'fovD', fovd: 'fovD', fov: 'fovD',
             fovhorizontal: 'fovH', fovh: 'fovH',
             fovvertical: 'fovV', fovv: 'fovV',
             ttlmm: 'ttl', ttl: 'ttl',
@@ -178,6 +172,7 @@ export function DashboardPage() {
             chiefrayangle: 'chiefRayAngle',
             mounttype: 'mountType', mount: 'mountType',
             lensstructure: 'lensStructure',
+            price: 'price',
           };
           
           const importedLenses = dataRows.map((row: any[]) => {
@@ -186,13 +181,28 @@ export function DashboardPage() {
               const firestoreKey = keyMap[header];
               if (firestoreKey) {
                 let value = row[index];
+                if (value === undefined || value === null) return;
+
                  if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
                   value = parseFloat(value);
-                  if (isNaN(value) || value === null || value === undefined) value = 0;
+                  if (isNaN(value)) value = 0;
                 }
                 (lensData as any)[firestoreKey] = value;
               }
             });
+
+            // Ensure all properties have a default value to prevent 'undefined' errors
+            const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
+            for (const prop of allLensKeys) {
+                if (lensData[prop] === undefined || lensData[prop] === null) {
+                    if (NUMERIC_PROPERTIES.includes(prop)) {
+                        (lensData as any)[prop] = 0;
+                    } else {
+                        (lensData as any)[prop] = '';
+                    }
+                }
+            }
+
             return lensData;
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
