@@ -283,15 +283,11 @@ export function DashboardPage() {
               let needsUpdate = false;
               for (const key in fileLens) {
                 const lensKey = key as keyof Lens;
-                const existingValue = existingLens[lensKey];
                 const newValue = fileLens[lensKey];
 
-                if (newValue !== undefined && newValue !== null) {
-                  const isExistingBlank = (typeof existingValue === 'string' && existingValue === '') || (typeof existingValue === 'number' && existingValue === 0);
-                  if (isExistingBlank) {
+                if (newValue !== undefined && newValue !== null && newValue !== 0) {
                     (updateData as any)[lensKey] = newValue;
                     needsUpdate = true;
-                  }
                 }
               }
 
@@ -415,3 +411,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
