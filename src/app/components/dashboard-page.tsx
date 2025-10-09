@@ -78,13 +78,11 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    // Regex to extract the number from "AE-M<number>" or "AE-LM<number>"
     const re = /AE-(?:L)?M(\d+)/i;
     
     const aMatch = a.match(re);
     const bMatch = b.match(re);
 
-    // If both strings match the pattern, compare them by number
     if (aMatch && bMatch) {
         const aNum = parseInt(aMatch[1], 10);
         const bNum = parseInt(bMatch[1], 10);
@@ -93,7 +91,6 @@ const naturalSort = (a: string, b: string) => {
         }
     }
     
-    // Fallback to localeCompare for non-matching patterns or equal numbers
     return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
@@ -158,7 +155,7 @@ export function DashboardPage() {
       if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
       if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
       if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fovD[1] !== null && lens.fovD > fNo[1]) return false;
+      if (fovD[1] !== null && lens.fNo > fNo[1]) return false;
       if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
       if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
       
@@ -253,55 +250,35 @@ export function DashboardPage() {
             return;
           }
           
+          // START: ONE-TIME DELETE LOGIC
+          toast({ title: 'Clearing Database', description: 'Removing all existing products...' });
           const existingDocsSnapshot = await getDocs(productsCollection);
-          const existingLensNames = new Set(existingDocsSnapshot.docs.map(doc => doc.data().name));
-          
-          const lensesToAdd: Partial<Lens>[] = [];
-          const duplicateLenses: string[] = [];
-
-          importedLenses.forEach(newLens => {
-            if (newLens.name && !existingLensNames.has(newLens.name)) {
-              lensesToAdd.push(newLens);
-            } else if (newLens.name) {
-              duplicateLenses.push(newLens.name);
-            }
+          const deleteBatch = writeBatch(firestore);
+          existingDocsSnapshot.docs.forEach(doc => {
+            deleteBatch.delete(doc.ref);
           });
+          await deleteBatch.commit();
+          toast({ title: 'Database Cleared', description: 'Now importing new products.' });
+          // END: ONE-TIME DELETE LOGIC
 
-          if (duplicateLenses.length > 0) {
-            toast({
-              title: 'Duplicates Found',
-              description: `${duplicateLenses.length} duplicate products were found and skipped.`
-            });
-          }
+          const batch = writeBatch(firestore);
+          importedLenses.forEach(newLens => {
+            const newDocRef = doc(productsCollection);
+            batch.set(newDocRef, newLens);
+          });
           
-          if (lensesToAdd.length > 0) {
-            const batch = writeBatch(firestore);
-            lensesToAdd.forEach(newLens => {
-              const newDocRef = doc(productsCollection);
-              batch.set(newDocRef, newLens);
-            });
-            
-            batch.commit()
-              .then(() => {
-                  toast({ title: 'Import Complete', description: `${lensesToAdd.length} new lenses imported successfully.` });
-              })
-              .catch((error) => {
-                const permissionError = new FirestorePermissionError({
-                    path: productsCollection.path,
-                    operation: 'write',
-                    requestResourceData: lensesToAdd
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
-          } else if (duplicateLenses.length > 0) {
-            // This case is for when there are duplicates but nothing new to add.
-            // The duplicate toast is already scheduled.
-          } else {
-             toast({
-              title: 'No New Data',
-              description: 'All products in the file already exist in the database.',
-            });
-          }
+          batch.commit()
+            .then(() => {
+                toast({ title: 'Import Complete', description: `${importedLenses.length} new lenses imported successfully.` });
+            })
+            .catch((error) => {
+              const permissionError = new FirestorePermissionError({
+                  path: productsCollection.path,
+                  operation: 'write',
+                  requestResourceData: importedLenses
+              });
+              errorEmitter.emit('permission-error', permissionError);
+          });
       };
       reader.readAsArrayBuffer(file);
     }
@@ -342,5 +319,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
