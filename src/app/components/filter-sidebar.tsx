@@ -42,7 +42,7 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
+      <div className="p-8 border-b">
         <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
             <Button variant="ghost" size="sm" onClick={resetFilters}>
@@ -54,7 +54,7 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
             </p>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4">
+        <div className="p-8">
           <Accordion type="multiple" defaultValue={['attributes', 'numeric']} className="w-full">
             <AccordionItem value="attributes">
               <AccordionTrigger>Attributes</AccordionTrigger>
