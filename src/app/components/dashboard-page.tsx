@@ -281,17 +281,27 @@ export function DashboardPage() {
             if (existingLens) {
                 const updateData: Partial<Lens> = {};
                 let needsUpdate = false;
+                
                 for (const key in fileLens) {
                     const lensKey = key as keyof Lens;
+                    if (!Object.prototype.hasOwnProperty.call(fileLens, lensKey)) continue;
+
                     const newValue = fileLens[lensKey];
                     const existingValue = existingLens[lensKey];
 
-                    const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '' || existingValue === 0;
-                    const isNewValuePresent = newValue !== undefined && newValue !== null && newValue !== '';
+                    if (newValue === null || newValue === undefined) continue;
 
-                    if (isExistingValueMissing && isNewValuePresent) {
-                        (updateData as any)[lensKey] = newValue;
-                        needsUpdate = true;
+                    if (NUMERIC_PROPERTIES.includes(lensKey)) {
+                        if (newValue !== existingValue) {
+                            (updateData as any)[lensKey] = newValue;
+                            needsUpdate = true;
+                        }
+                    } else { // For non-numeric (string) properties
+                        const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '';
+                        if (isExistingValueMissing && newValue) {
+                            (updateData as any)[lensKey] = newValue;
+                            needsUpdate = true;
+                        }
                     }
                 }
 
@@ -414,5 +424,7 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
 
     
