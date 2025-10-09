@@ -42,23 +42,23 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-2 border-b">
-        <div className="flex items-center justify-between p-2">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
             <Button variant="ghost" size="sm" onClick={resetFilters}>
                 Reset
             </Button>
             </div>
-            <p className="p-2 text-sm text-muted-foreground">
+            <p className="pt-2 text-sm text-muted-foreground">
                 Last synced: {new Date().toLocaleDateString()}
             </p>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <div className="p-2">
+        <div className="p-4">
           <Accordion type="multiple" defaultValue={['attributes', 'numeric']} className="w-full">
             <AccordionItem value="attributes">
               <AccordionTrigger>Attributes</AccordionTrigger>
-              <AccordionContent className="space-y-4">
+              <AccordionContent className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label>Sensor Size</Label>
                   <Select
@@ -97,7 +97,7 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
             </AccordionItem>
             <AccordionItem value="numeric">
               <AccordionTrigger>Numeric Ranges</AccordionTrigger>
-              <AccordionContent className="space-y-6">
+              <AccordionContent className="space-y-6 pt-4">
                 {renderRangeFilter('EFL (mm)', 'efl', filters, handleRangeChange)}
                 {renderRangeFilter('F. No.', 'fNo', filters, handleRangeChange)}
                 {renderRangeFilter('FOV - Diagonal (°)', 'fovD', filters, handleRangeChange)}
