@@ -78,14 +78,14 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    const re = /AE-(?:L)?M(\d+)/i;
+    const re = /(AE-(?:L)?M)(\d+)/i;
     
     const aMatch = a.match(re);
     const bMatch = b.match(re);
 
     if (aMatch && bMatch) {
-        const aNum = parseInt(aMatch[1], 10);
-        const bNum = parseInt(bMatch[1], 10);
+        const aNum = parseInt(aMatch[2], 10);
+        const bNum = parseInt(bMatch[2], 10);
         if (aNum !== bNum) {
             return aNum - bNum;
         }
@@ -210,7 +210,7 @@ export function DashboardPage() {
             price: 'price',
           };
           
-          const importedLenses = dataRows.map((row: any[]) => {
+          const fileLenses = dataRows.map((row: any[]) => {
             const lensData: Partial<Lens> = {};
             normalizedHeaders.forEach((header, index) => {
               const firestoreKey = keyMap[header];
@@ -241,7 +241,7 @@ export function DashboardPage() {
             return lensData;
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
-          if (importedLenses.length === 0) {
+          if (fileLenses.length === 0) {
             toast({
               variant: 'destructive',
               title: 'Import Warning',
@@ -249,33 +249,43 @@ export function DashboardPage() {
             });
             return;
           }
-          
-          // START: ONE-TIME DELETE LOGIC
-          toast({ title: 'Clearing Database', description: 'Removing all existing products...' });
-          const existingDocsSnapshot = await getDocs(productsCollection);
-          const deleteBatch = writeBatch(firestore);
-          existingDocsSnapshot.docs.forEach(doc => {
-            deleteBatch.delete(doc.ref);
-          });
-          await deleteBatch.commit();
-          toast({ title: 'Database Cleared', description: 'Now importing new products.' });
-          // END: ONE-TIME DELETE LOGIC
+
+          const existingLensesSnapshot = await getDocs(productsCollection);
+          const existingLensNames = new Set(existingLensesSnapshot.docs.map(doc => doc.data().name));
+
+          const newLenses = fileLenses.filter(lens => !existingLensNames.has(lens.name));
+          const duplicateCount = fileLenses.length - newLenses.length;
+
+          if (newLenses.length === 0) {
+            toast({
+              title: 'Import Complete',
+              description: `No new lenses were added. ${duplicateCount} duplicate(s) found and skipped.`,
+            });
+            return;
+          }
 
           const batch = writeBatch(firestore);
-          importedLenses.forEach(newLens => {
+          newLenses.forEach(newLens => {
             const newDocRef = doc(productsCollection);
             batch.set(newDocRef, newLens);
           });
           
           batch.commit()
             .then(() => {
-                toast({ title: 'Import Complete', description: `${importedLenses.length} new lenses imported successfully.` });
+                let description = `${newLenses.length} new lens(es) imported successfully.`;
+                if (duplicateCount > 0) {
+                  description += ` ${duplicateCount} duplicate(s) were skipped.`;
+                }
+                toast({ 
+                  title: 'Import Complete', 
+                  description: description 
+                });
             })
             .catch((error) => {
               const permissionError = new FirestorePermissionError({
                   path: productsCollection.path,
                   operation: 'write',
-                  requestResourceData: importedLenses
+                  requestResourceData: newLenses
               });
               errorEmitter.emit('permission-error', permissionError);
           });
@@ -319,3 +329,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
