@@ -75,6 +75,31 @@ function mapDocToLens(doc: DocumentData): Lens {
     return lens as Lens;
 }
 
+const naturalSort = (a: string, b: string) => {
+    const re = /(\d+)/g;
+    const aParts = a.split(re);
+    const bParts = b.split(re);
+
+    for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+        const aPart = aParts[i];
+        const bPart = bParts[i];
+
+        if (re.test(aPart) && re.test(bPart)) {
+            const aNum = parseInt(aPart, 10);
+            const bNum = parseInt(bPart, 10);
+            if (aNum !== bNum) {
+                return aNum - bNum;
+            }
+        } else {
+            if (aPart !== bPart) {
+                return aPart.localeCompare(bPart);
+            }
+        }
+    }
+
+    return a.length - b.length;
+};
+
 export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
@@ -112,9 +137,9 @@ export function DashboardPage() {
     if (sortOrder !== 'none') {
       sortedLenses.sort((a, b) => {
         if (sortOrder === 'asc') {
-          return a.name.localeCompare(b.name);
+          return naturalSort(a.name, b.name);
         } else {
-          return b.name.localeCompare(a.name);
+          return naturalSort(b.name, a.name);
         }
       });
     }
