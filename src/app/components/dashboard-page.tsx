@@ -78,33 +78,23 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    // Regular expression to split the string into text and number parts
-    const re = /(\d+)/;
-    const aParts = a.split(re);
-    const bParts = b.split(re);
+    // Regex to extract the number from "AE-M<number>" or "AE-LM<number>"
+    const re = /AE-(?:L)?M(\d+)/i;
+    
+    const aMatch = a.match(re);
+    const bMatch = b.match(re);
 
-    for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
-        const aPart = aParts[i];
-        const bPart = bParts[i];
-
-        // If the parts are numbers, compare them numerically
-        if (!isNaN(Number(aPart)) && !isNaN(Number(bPart))) {
-            const aNum = parseInt(aPart, 10);
-            const bNum = parseInt(bPart, 10);
-            if (aNum !== bNum) {
-                return aNum - bNum;
-            }
-        } else {
-            // Otherwise, compare them as strings
-            const comparison = aPart.localeCompare(bPart);
-            if (comparison !== 0) {
-                return comparison;
-            }
+    // If both strings match the pattern, compare them by number
+    if (aMatch && bMatch) {
+        const aNum = parseInt(aMatch[1], 10);
+        const bNum = parseInt(bMatch[1], 10);
+        if (aNum !== bNum) {
+            return aNum - bNum;
         }
     }
-
-    // If one string is a prefix of the other, the shorter string comes first
-    return a.length - b.length;
+    
+    // Fallback to localeCompare for non-matching patterns or equal numbers
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
 
