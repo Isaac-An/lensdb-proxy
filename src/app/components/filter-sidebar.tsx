@@ -60,6 +60,22 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
               <AccordionTrigger>Attributes</AccordionTrigger>
               <AccordionContent className="space-y-4 pt-4">
                 <div className="space-y-2">
+                  <Label>Sort by Name</Label>
+                  <Select
+                    value={filters.sortOrder}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, sortOrder: value as 'asc' | 'desc' | 'none' }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="asc">A-Z</SelectItem>
+                      <SelectItem value="desc">Z-A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Sensor Size</Label>
                   <Select
                     value={filters.sensorSize}

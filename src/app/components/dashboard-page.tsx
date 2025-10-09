@@ -19,6 +19,7 @@ export type Filters = {
   fNo: [number | null, number | null];
   fovD: [number | null, number | null];
   ttl: [number | null, number | null];
+  sortOrder: 'asc' | 'desc' | 'none';
 };
 
 const initialFilters: Filters = {
@@ -29,6 +30,7 @@ const initialFilters: Filters = {
   fNo: [null, null],
   fovD: [null, null],
   ttl: [null, null],
+  sortOrder: 'none',
 };
 
 const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name' | 'price'>)[] = [
@@ -103,8 +105,21 @@ export function DashboardPage() {
 
   const filteredLenses = useMemo(() => {
     if (!lenses) return [];
-    return lenses.filter(lens => {
-      const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl } = filters;
+    let sortedLenses = [...lenses];
+
+    const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder } = filters;
+
+    if (sortOrder !== 'none') {
+      sortedLenses.sort((a, b) => {
+        if (sortOrder === 'asc') {
+          return a.name.localeCompare(b.name);
+        } else {
+          return b.name.localeCompare(a.name);
+        }
+      });
+    }
+
+    return sortedLenses.filter(lens => {
       
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
