@@ -159,7 +159,7 @@ export function DashboardPage() {
       if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
       if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
       if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fovD[1] !== null && lens.fNo > fNo[1]) return false;
+      if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
       if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
       if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
       
@@ -253,7 +253,7 @@ export function DashboardPage() {
 
                  if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
                   value = parseFloat(value);
-                  if (isNaN(value)) value = 0;
+                  if (isNaN(value)) value = null; // Use null for blank numeric cells
                 }
                 (lensData as any)[firestoreKey] = value;
               }
@@ -279,33 +279,36 @@ export function DashboardPage() {
           for (const fileLens of fileLenses) {
             const existingLens = existingLensesMap.get(fileLens.name!);
             if (existingLens) {
-              const updateData: Partial<Lens> = {};
-              let needsUpdate = false;
-              for (const key in fileLens) {
-                const lensKey = key as keyof Lens;
-                const newValue = fileLens[lensKey];
+                const updateData: Partial<Lens> = {};
+                let needsUpdate = false;
+                for (const key in fileLens) {
+                    const lensKey = key as keyof Lens;
+                    const newValue = fileLens[lensKey];
+                    const existingValue = existingLens[lensKey];
 
-                if (newValue !== undefined && newValue !== null && newValue !== 0) {
-                    (updateData as any)[lensKey] = newValue;
-                    needsUpdate = true;
+                    const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '' || existingValue === 0;
+                    const isNewValuePresent = newValue !== undefined && newValue !== null && newValue !== '';
+
+                    if (isExistingValueMissing && isNewValuePresent) {
+                        (updateData as any)[lensKey] = newValue;
+                        needsUpdate = true;
+                    }
                 }
-              }
 
-              if (needsUpdate) {
-                duplicatesToUpdate.push({
-                  id: existingLens.id,
-                  name: existingLens.name,
-                  newData: updateData,
-                });
-              }
+                if (needsUpdate) {
+                    duplicatesToUpdate.push({
+                        id: existingLens.id,
+                        name: existingLens.name,
+                        newData: updateData,
+                    });
+                }
             } else {
-              // Populate with default values before adding to prevent undefined fields
               const completeLens: Partial<Lens> = {...fileLens};
               const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
               for (const prop of allLensKeys) {
                   if (completeLens[prop] === undefined || completeLens[prop] === null) {
                       if (NUMERIC_PROPERTIES.includes(prop)) {
-                          (completeLens as any)[prop] = 0;
+                          (completeLens as any)[prop] = null;
                       } else {
                           (completeLens as any)[prop] = '';
                       }
