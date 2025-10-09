@@ -78,33 +78,33 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    // Regular expression to extract the prefix and the numeric part
-    const re = /^(AE-(?:L?M))(\d+)$/i;
+    // Regular expression to split the string into text and number parts
+    const re = /(\d+)/;
+    const aParts = a.split(re);
+    const bParts = b.split(re);
 
-    const aMatch = a.match(re);
-    const bMatch = b.match(re);
+    for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+        const aPart = aParts[i];
+        const bPart = bParts[i];
 
-    // If both strings match the expected format
-    if (aMatch && bMatch) {
-        const aPrefix = aMatch[1];
-        const aNum = parseInt(aMatch[2], 10); // Parse the numeric part as an integer
-        const bPrefix = bMatch[1];
-        const bNum = parseInt(bMatch[2], 10); // Parse the numeric part as an integer
-
-        // First, compare by prefix (e.g., 'AE-M' vs 'AE-LM')
-        const prefixCompare = aPrefix.localeCompare(bPrefix);
-        if (prefixCompare !== 0) {
-            return prefixCompare;
-        }
-
-        // If prefixes are the same, compare by the parsed number
-        if (aNum !== bNum) {
-            return aNum - bNum;
+        // If the parts are numbers, compare them numerically
+        if (!isNaN(Number(aPart)) && !isNaN(Number(bPart))) {
+            const aNum = parseInt(aPart, 10);
+            const bNum = parseInt(bPart, 10);
+            if (aNum !== bNum) {
+                return aNum - bNum;
+            }
+        } else {
+            // Otherwise, compare them as strings
+            const comparison = aPart.localeCompare(bPart);
+            if (comparison !== 0) {
+                return comparison;
+            }
         }
     }
 
-    // Fallback to standard alphabetical sort for any strings that don't match the pattern
-    return a.localeCompare(b);
+    // If one string is a prefix of the other, the shorter string comes first
+    return a.length - b.length;
 };
 
 
