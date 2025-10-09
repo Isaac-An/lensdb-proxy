@@ -78,32 +78,32 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    // Regex to find a prefix (like AE-LM or AE-M) and the number
+    // Regular expression to extract the prefix and the numeric part
     const re = /^(AE-(?:L?M))(\d+)$/i;
 
     const aMatch = a.match(re);
     const bMatch = b.match(re);
 
-    // If both strings match the pattern, sort by number
+    // If both strings match the expected format
     if (aMatch && bMatch) {
         const aPrefix = aMatch[1];
-        const aNum = parseInt(aMatch[2], 10);
+        const aNum = parseInt(aMatch[2], 10); // Parse the numeric part as an integer
         const bPrefix = bMatch[1];
-        const bNum = parseInt(bMatch[2], 10);
+        const bNum = parseInt(bMatch[2], 10); // Parse the numeric part as an integer
 
-        // First sort by the prefix (in case of mixed AE-M and AE-LM)
+        // First, compare by prefix (e.g., 'AE-M' vs 'AE-LM')
         const prefixCompare = aPrefix.localeCompare(bPrefix);
         if (prefixCompare !== 0) {
             return prefixCompare;
         }
 
-        // Then sort by the number
+        // If prefixes are the same, compare by the parsed number
         if (aNum !== bNum) {
             return aNum - bNum;
         }
     }
 
-    // Fallback to standard alphabetical sort if pattern doesn't match
+    // Fallback to standard alphabetical sort for any strings that don't match the pattern
     return a.localeCompare(b);
 };
 
