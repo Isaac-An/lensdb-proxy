@@ -9,7 +9,7 @@ import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError, useUser } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, DocumentData, query, where } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, DocumentData, query, where, deleteDoc } from 'firebase/firestore';
 
 export type Filters = {
   searchQuery: string;
@@ -56,8 +56,10 @@ function mapDocToLens(doc: DocumentData): Lens {
 
     // First, map all data from the document
     for (const key in data) {
-      const mappedKey = propertyMapping[key] || key;
-      (lens as any)[mappedKey] = data[key];
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        const mappedKey = propertyMapping[key] || key;
+        (lens as any)[mappedKey] = data[key];
+      }
     }
 
     // Then, ensure all required properties have a default value
@@ -76,29 +78,35 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    const re = /(\d+)/g;
-    const aParts = a.split(re);
-    const bParts = b.split(re);
+    // Regex to find a prefix (like AE-LM or AE-M) and the number
+    const re = /^(AE-(?:L?M))(\d+)$/i;
 
-    for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
-        const aPart = aParts[i];
-        const bPart = bParts[i];
+    const aMatch = a.match(re);
+    const bMatch = b.match(re);
 
-        if (re.test(aPart) && re.test(bPart)) {
-            const aNum = parseInt(aPart, 10);
-            const bNum = parseInt(bPart, 10);
-            if (aNum !== bNum) {
-                return aNum - bNum;
-            }
-        } else {
-            if (aPart !== bPart) {
-                return aPart.localeCompare(bPart);
-            }
+    // If both strings match the pattern, sort by number
+    if (aMatch && bMatch) {
+        const aPrefix = aMatch[1];
+        const aNum = parseInt(aMatch[2], 10);
+        const bPrefix = bMatch[1];
+        const bNum = parseInt(bMatch[2], 10);
+
+        // First sort by the prefix (in case of mixed AE-M and AE-LM)
+        const prefixCompare = aPrefix.localeCompare(bPrefix);
+        if (prefixCompare !== 0) {
+            return prefixCompare;
+        }
+
+        // Then sort by the number
+        if (aNum !== bNum) {
+            return aNum - bNum;
         }
     }
 
-    return a.length - b.length;
+    // Fallback to standard alphabetical sort if pattern doesn't match
+    return a.localeCompare(b);
 };
+
 
 export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
