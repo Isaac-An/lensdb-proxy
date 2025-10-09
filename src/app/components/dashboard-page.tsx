@@ -215,30 +215,55 @@ export function DashboardPage() {
             return;
           }
           
-          const batch = writeBatch(firestore);
+          const existingDocsSnapshot = await getDocs(productsCollection);
+          const existingLensNames = new Set(existingDocsSnapshot.docs.map(doc => doc.data().name));
+          
+          const lensesToAdd: Partial<Lens>[] = [];
+          const duplicateLenses: string[] = [];
 
-          const existingDocs = await getDocs(productsCollection);
-          existingDocs.forEach(doc => {
-            batch.delete(doc.ref);
-          });
-          
           importedLenses.forEach(newLens => {
-            const newDocRef = doc(productsCollection);
-            batch.set(newDocRef, newLens);
+            if (newLens.name && !existingLensNames.has(newLens.name)) {
+              lensesToAdd.push(newLens);
+            } else if (newLens.name) {
+              duplicateLenses.push(newLens.name);
+            }
           });
+
+          if (duplicateLenses.length > 0) {
+            toast({
+              title: 'Duplicates Found',
+              description: `${duplicateLenses.length} duplicate products were found and skipped.`
+            });
+          }
           
-          batch.commit()
-            .then(() => {
-                toast({ title: 'Import Complete', description: `Database cleared and ${importedLenses.length} lenses imported successfully.` });
-            })
-            .catch((error) => {
-              const permissionError = new FirestorePermissionError({
-                  path: productsCollection.path,
-                  operation: 'write',
-                  requestResourceData: importedLenses
-              });
-              errorEmitter.emit('permission-error', permissionError);
-          });
+          if (lensesToAdd.length > 0) {
+            const batch = writeBatch(firestore);
+            lensesToAdd.forEach(newLens => {
+              const newDocRef = doc(productsCollection);
+              batch.set(newDocRef, newLens);
+            });
+            
+            batch.commit()
+              .then(() => {
+                  toast({ title: 'Import Complete', description: `${lensesToAdd.length} new lenses imported successfully.` });
+              })
+              .catch((error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: productsCollection.path,
+                    operation: 'write',
+                    requestResourceData: lensesToAdd
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
+          } else if (duplicateLenses.length > 0) {
+            // This case is for when there are duplicates but nothing new to add.
+            // The duplicate toast is already scheduled.
+          } else {
+             toast({
+              title: 'No New Data',
+              description: 'All products in the file already exist in the database.',
+            });
+          }
       };
       reader.readAsArrayBuffer(file);
     }
