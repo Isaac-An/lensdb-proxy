@@ -9,7 +9,7 @@ import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError, useUser } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, DocumentData, query, where } from 'firebase/firestore';
 
 export type Filters = {
   searchQuery: string;
@@ -54,7 +54,7 @@ function mapDocToLens(doc: DocumentData): Lens {
 
     for (const key in data) {
       const mappedKey = propertyMapping[key] || key;
-      if (LENS_PROPERTIES.includes(mappedKey as any)) {
+      if (LENS_PROPERTIES.includes(mappedKey as any) || key === 'name') {
         let value = data[key];
         if (NUMERIC_PROPERTIES.includes(mappedKey as any)) {
           value = typeof value === 'string' ? parseFloat(value) : value;
@@ -148,62 +148,51 @@ export function DashboardPage() {
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          if (json.length < 2) {
+            toast({ variant: 'destructive', title: 'Import Error', description: 'Spreadsheet is empty.'});
+            return;
+          }
+
+          const headerRow = json[0];
+          const dataRows = json.slice(1);
 
           const normalizeHeader = (header: string) => 
-            header.toLowerCase().replace(/[^a-z0-9]/g, '');
+            typeof header === 'string' ? header.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+          
+          const normalizedHeaders = headerRow.map(normalizeHeader);
 
-          const headerMap: { [key: string]: keyof Lens } = {
-            productname: 'name',
-            name: 'name',
+          const keyMap: { [key: string]: keyof Lens } = {
+            productname: 'name', name: 'name',
             sensorsize: 'sensorSize',
-            eflmm: 'efl',
-            efl: 'efl',
-            maximagecirclemm: 'maxImageCircle',
-            maximagecircle: 'maxImageCircle',
-            fno: 'fNo',
-            fovdiagonal: 'fovD',
-            fovd: 'fovD',
-            fovhorizontal: 'fovH',
-            fovh: 'fovH',
-            fovvertical: 'fovV',
-            fovv: 'fovV',
-            ttlmm: 'ttl',
-            ttl: 'ttl',
+            eflmm: 'efl', efl: 'efl',
+            maximagecirclemm: 'maxImageCircle', maximagecircle: 'maxImageCircle',
+            fno: 'fNo', f: 'fNo',
+            fovdiagonal: 'fovD', fovd: 'fovD',
+            fovhorizontal: 'fovH', fovh: 'fovH',
+            fovvertical: 'fovV', fovv: 'fovV',
+            ttlmm: 'ttl', ttl: 'ttl',
             tvdistortion: 'tvDistortion',
             relativeillumination: 'relativeIllumination',
             chiefrayangle: 'chiefRayAngle',
-            mounttype: 'mountType',
-            mount: 'mountType',
+            mounttype: 'mountType', mount: 'mountType',
             lensstructure: 'lensStructure',
           };
           
-          const importedLenses = json.map((row: any) => {
+          const importedLenses = dataRows.map((row: any[]) => {
             const lensData: Partial<Lens> = {};
-            for (const excelKey in row) {
-              const normalizedKey = normalizeHeader(excelKey);
-              const firestoreKey = headerMap[normalizedKey];
-              
+            normalizedHeaders.forEach((header, index) => {
+              const firestoreKey = keyMap[header];
               if (firestoreKey) {
-                let value = row[excelKey];
-                if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
+                let value = row[index];
+                 if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
                   value = parseFloat(value);
-                  if (isNaN(value)) value = 0;
+                  if (isNaN(value) || value === null || value === undefined) value = 0;
                 }
                 (lensData as any)[firestoreKey] = value;
               }
-            }
-
-            LENS_PROPERTIES.forEach(prop => {
-                if ((lensData as any)[prop] === undefined) {
-                    if (NUMERIC_PROPERTIES.includes(prop)) {
-                        (lensData as any)[prop] = 0;
-                    } else if (prop !== 'name') {
-                        (lensData as any)[prop] = '';
-                    }
-                }
             });
-
             return lensData;
           }).filter(lens => lens.name && typeof lens.name === 'string');
 
@@ -230,20 +219,15 @@ export function DashboardPage() {
           
           batch.commit()
             .then(() => {
-                toast({ title: 'Import Complete', description: `${importedLenses.length} lenses imported successfully.` });
+                toast({ title: 'Import Complete', description: `Database cleared and ${importedLenses.length} lenses imported successfully.` });
             })
             .catch((error) => {
-              // Simplified error handling
               const permissionError = new FirestorePermissionError({
                   path: productsCollection.path,
-                  operation: 'write'
+                  operation: 'write',
+                  requestResourceData: importedLenses
               });
               errorEmitter.emit('permission-error', permissionError);
-              toast({
-                  variant: 'destructive',
-                  title: 'Import Failed',
-                  description: 'Could not save to database. Check permissions.',
-              });
           });
       };
       reader.readAsArrayBuffer(file);
