@@ -171,7 +171,7 @@ export function DashboardPage() {
       }
       
       // Sensor Size Filter
-      if (sensorSize !== 'all' && !lens.name.trim().startsWith(sensorSize)) {
+      if (sensorSize !== 'all' && normalizeSensorSize(lens.sensorSize) !== sensorSize) {
         return false;
       }
       
