@@ -169,7 +169,7 @@ export function DashboardPage() {
       
       if (sensorSize !== 'all') {
         const isSensorMatch = normalizeSensorSize(lens.sensorSize) === sensorSize;
-        const isNameMatch = lens.name.startsWith(sensorSize);
+        const isNameMatch = lens.name.trim().startsWith(sensorSize);
         if (!isSensorMatch && !isNameMatch) {
           return false;
         }
@@ -439,5 +439,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
