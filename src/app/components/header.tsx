@@ -2,13 +2,14 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileInput, Search } from 'lucide-react';
+import { FileInput, Search, Trash2 } from 'lucide-react';
 import React, { useRef } from 'react';
 
 type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
   isImportDisabled?: boolean;
 };
 
@@ -16,6 +17,7 @@ export function AppHeader({
   searchQuery,
   onSearchChange,
   onImport,
+  onClear,
   isImportDisabled = false,
 }: AppHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +60,10 @@ export function AppHeader({
               accept=".xlsx, .xls, .csv"
               disabled={isImportDisabled}
             />
+             <Button size="sm" variant="destructive" onClick={onClear} disabled={isImportDisabled}>
+                <Trash2 />
+                Clear
+            </Button>
         </div>
       </div>
     </header>
