@@ -141,7 +141,7 @@ export function DashboardPage() {
       return a.localeCompare(b);
     };
     
-    const uniqueSensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean).map(normalizeSensorSize))];
+    const uniqueSensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
     return { sensorSizes: sortedSensorSizes, mountTypes };
@@ -170,7 +170,7 @@ export function DashboardPage() {
       }
       
       if (sensorSize !== 'all' && !lens.name.startsWith(sensorSize)) {
-          return false;
+        return false;
       }
 
       if (mountType !== 'all' && lens.mountType !== mountType) {
