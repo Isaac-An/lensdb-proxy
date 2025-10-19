@@ -141,7 +141,13 @@ export function DashboardPage() {
       return a.localeCompare(b);
     };
     
-    const uniqueSensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))];
+    const baseSensorSizes = lenses.map(l => {
+      const size = l.sensorSize || '';
+      const spaceIndex = size.indexOf(' ');
+      return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
+    }).filter(Boolean);
+
+    const uniqueSensorSizes = [...new Set(baseSensorSizes)];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
     return { sensorSizes: sortedSensorSizes, mountTypes };
