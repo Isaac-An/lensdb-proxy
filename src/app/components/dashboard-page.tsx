@@ -164,9 +164,9 @@ export function DashboardPage() {
         return false;
       }
       if (sensorSize !== 'all') {
-        const nameMatches = lens.name.startsWith(sensorSize);
         const propertyMatches = lens.sensorSize === sensorSize;
-        if (!nameMatches && !propertyMatches) {
+        const nameMatches = lens.name.startsWith(sensorSize);
+        if (!propertyMatches && !nameMatches) {
           return false;
         }
       }
