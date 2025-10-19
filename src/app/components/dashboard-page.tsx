@@ -163,12 +163,14 @@ export function DashboardPage() {
     }
 
     return sortedLenses.filter(lens => {
+      const normalizeSensorSize = (size: string) => size.replace(/''/g, '"').trim();
+
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
       if (sensorSize !== 'all') {
-        const normalizedLensSensorSize = lens.sensorSize.replace(/''/g, '"').trim();
+        const normalizedLensSensorSize = normalizeSensorSize(lens.sensorSize);
         const propertyMatches = normalizedLensSensorSize === sensorSize;
         const nameMatches = lens.name.trim().startsWith(sensorSize);
         if (!propertyMatches && !nameMatches) {
@@ -316,9 +318,9 @@ export function DashboardPage() {
 
                     if (newValue === null || newValue === undefined) continue;
                     
-                    if (newValue !== existingValue && newValue !== 0) {
+                    if (newValue !== existingValue) {
                        if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                          if (newValue !== existingValue) {
+                          if (newValue !== existingValue && newValue !== 0) {
                               (updateData as any)[lensKey] = newValue;
                               needsUpdate = true;
                           }
