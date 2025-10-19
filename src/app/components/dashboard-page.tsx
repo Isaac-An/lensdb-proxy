@@ -9,19 +9,8 @@ import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError, useUser } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, DocumentData, deleteDoc, query } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, DocumentData } from 'firebase/firestore';
 import { UpdateConfirmationDialog, type LensForUpdate } from './update-confirmation-dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
 
 export type Filters = {
   searchQuery: string;
@@ -113,7 +102,6 @@ export function DashboardPage() {
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const [lensesToUpdate, setLensesToUpdate] = useState<LensForUpdate[]>([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
-  const [isClearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -151,7 +139,7 @@ export function DashboardPage() {
       }
       return a.localeCompare(b);
     };
-
+    
     const uniqueSensorSizes = [...new Set(lenses.map(l => normalizeSensorSize(l.sensorSize)).filter(Boolean))];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
@@ -180,10 +168,8 @@ export function DashboardPage() {
       }
       
       if (sensorSize !== 'all') {
-        const normalizedLensSensor = normalizeSensorSize(lens.sensorSize);
-        const nameMatches = lens.name.trim().startsWith(sensorSize);
-        const sensorMatches = normalizedLensSensor === sensorSize;
-        if (!nameMatches && !sensorMatches) {
+        const nameMatches = lens.name.startsWith(sensorSize);
+        if (!nameMatches) {
             return false;
         }
       }
@@ -237,51 +223,6 @@ export function DashboardPage() {
     setUpdateConfirmOpen(false);
     setLensesToUpdate([]);
   };
-
-  const handleClearDatabase = async () => {
-    if (!firestore || !productsCollection) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firestore is not initialized.',
-      });
-      return;
-    }
-
-    setClearConfirmOpen(false);
-
-    try {
-      const q = query(productsCollection);
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        toast({
-          title: 'Database Empty',
-          description: 'There are no products to delete.',
-        });
-        return;
-      }
-
-      const batch = writeBatch(firestore);
-      querySnapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      await batch.commit();
-
-      toast({
-        title: 'Database Cleared',
-        description: `Successfully deleted ${querySnapshot.size} products.`,
-      });
-    } catch (error: any) {
-       const permissionError = new FirestorePermissionError({
-          path: productsCollection.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    }
-  };
-
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -464,7 +405,6 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
           onImport={handleImport}
-          onClear={() => setClearConfirmOpen(true)}
           isImportDisabled={isUserLoading}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -494,24 +434,6 @@ export function DashboardPage() {
           })
         }}
       />
-      
-      <AlertDialog open={isClearConfirmOpen} onOpenChange={setClearConfirmOpen}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete all
-                products from your database.
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearDatabase} className="bg-destructive hover:bg-destructive/90">
-                Yes, delete all
-            </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
     </div>
   );
 }
