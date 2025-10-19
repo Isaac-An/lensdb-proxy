@@ -167,11 +167,8 @@ export function DashboardPage() {
         return false;
       }
       
-      if (sensorSize !== 'all') {
-        const nameMatches = lens.name.startsWith(sensorSize);
-        if (!nameMatches) {
-            return false;
-        }
+      if (sensorSize !== 'all' && !lens.name.startsWith(sensorSize)) {
+        return false;
       }
       
       if (mountType !== 'all' && lens.mountType !== mountType) {
