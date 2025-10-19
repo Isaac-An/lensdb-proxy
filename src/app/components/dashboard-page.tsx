@@ -163,35 +163,15 @@ export function DashboardPage() {
         }
       });
     }
+
+    if (sensorSize !== 'all') {
+      return processedLenses.filter(lens => 
+        lens.name.trim().startsWith(sensorSize)
+      );
+    }
     
-    return processedLenses.filter(lens => {
-      // Search Query Filter
-      if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      
-      // Sensor Size Filter
-      if (sensorSize !== 'all' && !lens.name.trim().startsWith(sensorSize)) {
-        return false;
-      }
-      
-      // Mount Type Filter
-      if (mountType !== 'all' && lens.mountType !== mountType) {
-        return false;
-      }
-  
-      // Numeric Range Filters
-      if (efl[0] !== null && lens.efl < efl[0]) return false;
-      if (efl[1] !== null && lens.efl > efl[1]) return false;
-      if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
-      if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
-      if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fovD[1] !== null && lens.fovD > fovD[1]) return false;
-      if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
-      if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
-      
-      return true;
-    });
+    return processedLenses;
+
   }, [filters, lenses]);
 
   const handleSelectLens = (lens: Lens) => {
@@ -441,3 +421,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
