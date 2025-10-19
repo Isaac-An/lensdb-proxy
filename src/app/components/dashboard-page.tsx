@@ -163,17 +163,16 @@ export function DashboardPage() {
     }
 
     return sortedLenses.filter(lens => {
-      const normalizeSensorSize = (size: string) => size.replace(/''/g, '"').trim();
-
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
       if (sensorSize !== 'all') {
-        const normalizedLensSensorSize = normalizeSensorSize(lens.sensorSize);
-        const propertyMatches = normalizedLensSensorSize === sensorSize;
+        const normalize = (size: string) => size.replace(/''/g, '"').trim();
+        const normalizedLensSensorSize = normalize(lens.sensorSize);
         const nameMatches = lens.name.trim().startsWith(sensorSize);
-        if (!propertyMatches && !nameMatches) {
+        
+        if (normalizedLensSensorSize !== sensorSize && !nameMatches) {
           return false;
         }
       }
@@ -320,16 +319,16 @@ export function DashboardPage() {
                     
                     if (newValue !== existingValue) {
                        if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                          if (newValue !== existingValue && newValue !== 0) {
-                              (updateData as any)[lensKey] = newValue;
-                              needsUpdate = true;
-                          }
+                           if (newValue !== existingValue && newValue !== 0) {
+                               (updateData as any)[lensKey] = newValue;
+                               needsUpdate = true;
+                           }
                        } else { // For non-numeric (string) properties
-                          const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '';
-                          if (isExistingValueMissing && newValue) {
-                              (updateData as any)[lensKey] = newValue;
-                              needsUpdate = true;
-                          }
+                           const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '';
+                           if (isExistingValueMissing && newValue) {
+                               (updateData as any)[lensKey] = newValue;
+                               needsUpdate = true;
+                           }
                        }
                     }
                 }
@@ -442,5 +441,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
