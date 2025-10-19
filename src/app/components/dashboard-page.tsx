@@ -170,7 +170,7 @@ export function DashboardPage() {
       if (sensorSize !== 'all') {
         const normalizedLensSensorSize = lens.sensorSize.replace(/''/g, '"').trim();
         const propertyMatches = normalizedLensSensorSize === sensorSize;
-        const nameMatches = lens.name.startsWith(sensorSize);
+        const nameMatches = lens.name.trim().startsWith(sensorSize);
         if (!propertyMatches && !nameMatches) {
           return false;
         }
@@ -315,18 +315,20 @@ export function DashboardPage() {
                     const existingValue = existingLens[lensKey];
 
                     if (newValue === null || newValue === undefined) continue;
-
-                    if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                        if (newValue !== existingValue) {
-                            (updateData as any)[lensKey] = newValue;
-                            needsUpdate = true;
-                        }
-                    } else { // For non-numeric (string) properties
-                        const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '';
-                        if (isExistingValueMissing && newValue) {
-                            (updateData as any)[lensKey] = newValue;
-                            needsUpdate = true;
-                        }
+                    
+                    if (newValue !== existingValue && newValue !== 0) {
+                       if (NUMERIC_PROPERTIES.includes(lensKey)) {
+                          if (newValue !== existingValue) {
+                              (updateData as any)[lensKey] = newValue;
+                              needsUpdate = true;
+                          }
+                       } else { // For non-numeric (string) properties
+                          const isExistingValueMissing = existingValue === undefined || existingValue === null || existingValue === '';
+                          if (isExistingValueMissing && newValue) {
+                              (updateData as any)[lensKey] = newValue;
+                              needsUpdate = true;
+                          }
+                       }
                     }
                 }
 
@@ -438,3 +440,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
