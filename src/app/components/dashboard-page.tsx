@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -148,11 +149,11 @@ export function DashboardPage() {
 
   const filteredLenses = useMemo(() => {
     if (!lenses) return [];
-
+  
     const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder } = filters;
-
+  
     let processedLenses = [...lenses];
-
+  
     if (sortOrder !== 'none') {
       processedLenses.sort((a, b) => {
         if (sortOrder === 'asc') {
@@ -164,18 +165,22 @@ export function DashboardPage() {
     }
     
     return processedLenses.filter(lens => {
+      // Search Query Filter
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
-      const normalizedLensName = normalizeSensorSize(lens.name);
-      if (sensorSize !== 'all' && !normalizedLensName.startsWith(sensorSize)) {
+      // Sensor Size Filter
+      if (sensorSize !== 'all' && !normalizeSensorSize(lens.name).startsWith(sensorSize)) {
         return false;
       }
       
+      // Mount Type Filter
       if (mountType !== 'all' && lens.mountType !== mountType) {
         return false;
       }
+  
+      // Numeric Range Filters
       if (efl[0] !== null && lens.efl < efl[0]) return false;
       if (efl[1] !== null && lens.efl > efl[1]) return false;
       if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
@@ -436,3 +441,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
