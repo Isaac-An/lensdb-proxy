@@ -138,9 +138,12 @@ export function DashboardPage() {
       return a.localeCompare(b);
     };
 
-    const sensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))].sort(customSensorSort);
+    const normalizeSensorSize = (size: string) => size.replace(/''/g, '"').trim();
+
+    const uniqueSensorSizes = [...new Set(lenses.map(l => normalizeSensorSize(l.sensorSize)).filter(Boolean))];
+    const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
-    return { sensorSizes, mountTypes };
+    return { sensorSizes: sortedSensorSizes, mountTypes };
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
@@ -165,7 +168,8 @@ export function DashboardPage() {
       }
       
       if (sensorSize !== 'all') {
-        const propertyMatches = lens.sensorSize === sensorSize;
+        const normalizedLensSensorSize = lens.sensorSize.replace(/''/g, '"').trim();
+        const propertyMatches = normalizedLensSensorSize === sensorSize;
         const nameMatches = lens.name.startsWith(sensorSize);
         if (!propertyMatches && !nameMatches) {
           return false;
@@ -180,7 +184,7 @@ export function DashboardPage() {
       if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
       if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
       if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fovD[1] !== null && lens.fovD > fovD[1]) return false; // This was a bug, should be fovD not fNo
+      if (fovD[1] !== null && lens.fovD > fovD[1]) return false;
       if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
       if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
       
@@ -313,7 +317,7 @@ export function DashboardPage() {
                     if (newValue === null || newValue === undefined) continue;
 
                     if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                        if (newValue !== 0 && newValue !== existingValue) {
+                        if (newValue !== existingValue) {
                             (updateData as any)[lensKey] = newValue;
                             needsUpdate = true;
                         }
@@ -434,5 +438,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
