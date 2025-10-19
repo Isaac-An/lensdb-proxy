@@ -129,11 +129,12 @@ export function DashboardPage() {
       const matchB = b.match(regex);
 
       if (matchA && matchB) {
-        const valA = parseInt(matchA[1]) / parseFloat(matchB[2]);
+        const valA = parseInt(matchA[1]) / parseFloat(matchA[2]);
         const valB = parseInt(matchB[1]) / parseFloat(matchB[2]);
-        return valB - valA; // Sort descending
+        if (valA !== valB) {
+          return valB - valA; 
+        }
       }
-      // Fallback for non-fractional formats
       return a.localeCompare(b);
     };
 
@@ -159,10 +160,10 @@ export function DashboardPage() {
     }
 
     return sortedLenses.filter(lens => {
-      
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
+      
       if (sensorSize !== 'all') {
         const propertyMatches = lens.sensorSize === sensorSize;
         const nameMatches = lens.name.startsWith(sensorSize);
@@ -170,6 +171,7 @@ export function DashboardPage() {
           return false;
         }
       }
+      
       if (mountType !== 'all' && lens.mountType !== mountType) {
         return false;
       }
@@ -178,7 +180,7 @@ export function DashboardPage() {
       if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
       if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
       if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
+      if (fovD[1] !== null && lens.fovD > fovD[1]) return false; // This was a bug, should be fovD not fNo
       if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
       if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
       
@@ -311,7 +313,7 @@ export function DashboardPage() {
                     if (newValue === null || newValue === undefined) continue;
 
                     if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                        if (newValue !== existingValue) {
+                        if (newValue !== 0 && newValue !== existingValue) {
                             (updateData as any)[lensKey] = newValue;
                             needsUpdate = true;
                         }
