@@ -120,6 +120,8 @@ export function DashboardPage() {
     return rawLenses.map(doc => mapDocToLens({ id: doc.id, data: () => doc }));
   }, [rawLenses]);
   
+  const normalizeSensorSize = (size: string) => size.replace(/''/g, '"');
+
   const { sensorSizes, mountTypes } = useMemo(() => {
     if (!lenses) return { sensorSizes: [], mountTypes: [] };
     
@@ -137,8 +139,6 @@ export function DashboardPage() {
       }
       return a.localeCompare(b);
     };
-
-    const normalizeSensorSize = (size: string) => size.replace(/''/g, '"');
 
     const uniqueSensorSizes = [...new Set(lenses.map(l => normalizeSensorSize(l.sensorSize)).filter(Boolean))];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
@@ -162,8 +162,6 @@ export function DashboardPage() {
       });
     }
     
-    const normalizeSensorSize = (size: string) => size.replace(/''/g, '"');
-
     return sortedLenses.filter(lens => {
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
@@ -441,3 +439,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
