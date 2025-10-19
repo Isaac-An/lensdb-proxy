@@ -80,14 +80,14 @@ function mapDocToLens(doc: DocumentData): Lens {
 }
 
 const naturalSort = (a: string, b: string) => {
-    const re = /(?:AE-L?M)(\d+)/i;
+    const re = /AE-(L?M)(\d+)/i;
     
     const aMatch = a.match(re);
     const bMatch = b.match(re);
 
     if (aMatch && bMatch) {
-        const aNum = parseInt(aMatch[1], 10);
-        const bNum = parseInt(bMatch[1], 10);
+        const aNum = parseInt(aMatch[2], 10);
+        const bNum = parseInt(bMatch[2], 10);
         if (aNum !== bNum) {
             return aNum - bNum;
         }
@@ -124,13 +124,13 @@ export function DashboardPage() {
     if (!lenses) return { sensorSizes: [], mountTypes: [] };
     
     const customSensorSort = (a: string, b: string) => {
-      const regex = /(\d+)\/(\d+)/;
+      const regex = /(\d+)\/(\d+(\.\d+)?)/;
       const matchA = a.match(regex);
       const matchB = b.match(regex);
 
       if (matchA && matchB) {
-        const valA = parseInt(matchA[1]) / parseInt(matchA[2]);
-        const valB = parseInt(matchB[1]) / parseInt(matchB[2]);
+        const valA = parseInt(matchA[1]) / parseFloat(matchB[2]);
+        const valB = parseInt(matchB[1]) / parseFloat(matchB[2]);
         return valB - valA; // Sort descending
       }
       // Fallback for non-fractional formats
@@ -432,3 +432,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
