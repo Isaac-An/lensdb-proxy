@@ -95,6 +95,8 @@ const naturalSort = (a: string, b: string) => {
     return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
+const normalizeSensorSize = (size: string) => (typeof size === 'string' ? size.replace(/''/g, '"') : '');
+
 
 export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -120,8 +122,6 @@ export function DashboardPage() {
     return rawLenses.map(doc => mapDocToLens({ id: doc.id, data: () => doc }));
   }, [rawLenses]);
   
-  const normalizeSensorSize = (size: string) => (typeof size === 'string' ? size.replace(/''/g, '"') : '');
-
   const { sensorSizes, mountTypes } = useMemo(() => {
     if (!lenses) return { sensorSizes: [], mountTypes: [] };
     
@@ -168,7 +168,8 @@ export function DashboardPage() {
         return false;
       }
       
-      if (sensorSize !== 'all' && !lens.name.startsWith(sensorSize)) {
+      const normalizedLensName = normalizeSensorSize(lens.name);
+      if (sensorSize !== 'all' && !normalizedLensName.startsWith(sensorSize)) {
         return false;
       }
       
