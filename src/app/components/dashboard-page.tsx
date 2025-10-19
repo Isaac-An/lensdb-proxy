@@ -122,7 +122,22 @@ export function DashboardPage() {
   
   const { sensorSizes, mountTypes } = useMemo(() => {
     if (!lenses) return { sensorSizes: [], mountTypes: [] };
-    const sensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))].sort();
+    
+    const customSensorSort = (a: string, b: string) => {
+      const regex = /(\d+)\/(\d+)/;
+      const matchA = a.match(regex);
+      const matchB = b.match(regex);
+
+      if (matchA && matchB) {
+        const valA = parseInt(matchA[1]) / parseInt(matchA[2]);
+        const valB = parseInt(matchB[1]) / parseInt(matchB[2]);
+        return valB - valA; // Sort descending
+      }
+      // Fallback for non-fractional formats
+      return a.localeCompare(b);
+    };
+
+    const sensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))].sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
     return { sensorSizes, mountTypes };
   }, [lenses]);
@@ -148,8 +163,12 @@ export function DashboardPage() {
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      if (sensorSize !== 'all' && lens.sensorSize !== sensorSize) {
-        return false;
+      if (sensorSize !== 'all') {
+        const nameMatches = lens.name.startsWith(sensorSize);
+        const propertyMatches = lens.sensorSize === sensorSize;
+        if (!nameMatches && !propertyMatches) {
+          return false;
+        }
       }
       if (mountType !== 'all' && lens.mountType !== mountType) {
         return false;
@@ -328,7 +347,14 @@ export function DashboardPage() {
             }
           }
 
-          const duplicateCount = fileLenses.length - newLenses.length - duplicatesToUpdate.length;
+          let description = `${newLenses.length} new lens(es) imported.`;
+          if (duplicatesToUpdate.length > 0) {
+            setLensesToUpdate(duplicatesToUpdate);
+            setUpdateConfirmOpen(true);
+          } else if (newLenses.length === 0) {
+             const skippedCount = fileLenses.length - newLenses.length - duplicatesToUpdate.length;
+             description = `No new lenses to import. ${skippedCount > 0 ? skippedCount + ' duplicate(s) without new info found.' : ''}`;
+          }
 
           // Handle new lenses
           if (newLenses.length > 0) {
@@ -345,24 +371,6 @@ export function DashboardPage() {
               });
               errorEmitter.emit('permission-error', permissionError);
             });
-          }
-
-          // Handle duplicates that can be updated
-          if (duplicatesToUpdate.length > 0) {
-            setLensesToUpdate(duplicatesToUpdate);
-            setUpdateConfirmOpen(true);
-          }
-
-          // Final toast message
-          let description = '';
-          if (newLenses.length > 0) {
-            description += `${newLenses.length} new lens(es) imported. `;
-          }
-          if (duplicateCount > 0) {
-            description += `${duplicateCount} duplicate(s) without new info were skipped. `;
-          }
-          if (duplicatesToUpdate.length === 0 && newLenses.length === 0) {
-            description = `No new lenses to import. ${duplicateCount > 0 ? duplicateCount + ' duplicate(s) found.' : ''}`;
           }
 
           toast({
@@ -424,7 +432,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
-
-    
