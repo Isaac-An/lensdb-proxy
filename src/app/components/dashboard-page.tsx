@@ -165,22 +165,18 @@ export function DashboardPage() {
     }
 
     return processedLenses.filter(lens => {
-      // Search Query Filter
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
-      // Sensor Size Filter
       if (sensorSize !== 'all' && !lens.name.startsWith(sensorSize)) {
           return false;
       }
 
-      // Mount Type Filter
       if (mountType !== 'all' && lens.mountType !== mountType) {
         return false;
       }
 
-      // Numeric Range Filters
       if (efl[0] !== null && lens.efl < efl[0]) return false;
       if (efl[1] !== null && lens.efl > efl[1]) return false;
 
@@ -445,11 +441,5 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
 
     
