@@ -162,17 +162,17 @@ export function DashboardPage() {
       });
     }
 
+    const normalize = (str: string) => str.replace(/''/g, '"').trim();
+
     return sortedLenses.filter(lens => {
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
       if (sensorSize !== 'all') {
-        const normalize = (size: string) => size.replace(/''/g, '"').trim();
-        const normalizedLensSensorSize = normalize(lens.sensorSize);
-        const nameMatches = lens.name.trim().startsWith(sensorSize);
-        
-        if (normalizedLensSensorSize !== sensorSize && !nameMatches) {
+        const isSensorMatch = normalize(lens.sensorSize) === sensorSize;
+        const isNameMatch = normalize(lens.name).startsWith(sensorSize);
+        if (!isSensorMatch && !isNameMatch) {
           return false;
         }
       }
@@ -319,7 +319,7 @@ export function DashboardPage() {
                     
                     if (newValue !== existingValue) {
                        if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                           if (newValue !== existingValue) {
+                           if (newValue !== 0 && newValue !== existingValue) {
                                (updateData as any)[lensKey] = newValue;
                                needsUpdate = true;
                            }
