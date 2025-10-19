@@ -169,7 +169,7 @@ export function DashboardPage() {
         return false;
       }
       
-      if (sensorSize !== 'all' && !lens.name.startsWith(sensorSize)) {
+      if (sensorSize !== 'all' && lens.sensorSize !== sensorSize) {
         return false;
       }
 
