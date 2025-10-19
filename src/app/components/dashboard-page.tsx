@@ -148,12 +148,13 @@ export function DashboardPage() {
 
   const filteredLenses = useMemo(() => {
     if (!lenses) return [];
-    let sortedLenses = [...lenses];
 
     const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder } = filters;
 
+    let processedLenses = [...lenses];
+
     if (sortOrder !== 'none') {
-      sortedLenses.sort((a, b) => {
+      processedLenses.sort((a, b) => {
         if (sortOrder === 'asc') {
           return naturalSort(a.name, b.name);
         } else {
@@ -162,7 +163,7 @@ export function DashboardPage() {
       });
     }
     
-    return sortedLenses.filter(lens => {
+    return processedLenses.filter(lens => {
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
