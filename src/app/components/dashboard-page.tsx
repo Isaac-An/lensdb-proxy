@@ -141,8 +141,7 @@ export function DashboardPage() {
       return a.localeCompare(b);
     };
     
-    // Correctly derive "simple" sensor sizes from the name property
-    const uniqueSensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean))];
+    const uniqueSensorSizes = [...new Set(lenses.map(l => l.sensorSize).filter(Boolean).map(normalizeSensorSize))];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
     return { sensorSizes: sortedSensorSizes, mountTypes };
@@ -446,6 +445,8 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    
 
     
 
