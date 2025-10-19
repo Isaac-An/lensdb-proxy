@@ -319,7 +319,7 @@ export function DashboardPage() {
                     
                     if (newValue !== existingValue) {
                        if (NUMERIC_PROPERTIES.includes(lensKey)) {
-                           if (newValue !== existingValue) { // Allow updating if different, even from 0
+                           if (newValue !== existingValue) {
                                (updateData as any)[lensKey] = newValue;
                                needsUpdate = true;
                            }
@@ -441,5 +441,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    
