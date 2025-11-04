@@ -14,4 +14,5 @@ export interface Lens {
   chiefRayAngle: number;
   mountType: string;
   lensStructure: string;
+  pdfUrl?: string; // Add optional pdfUrl
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Lens } from '@/app/lib/types';
 import {
   Sheet,
@@ -11,7 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
+import { useFirebaseApp } from '@/firebase';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -20,15 +22,37 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-  if (!lens) return null;
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const firebaseApp = useFirebaseApp();
 
-  // Sanitize the lens name for use in a URL path component.
-  // Replace characters that are invalid in filenames, like '/', with a safe character like '-'.
-  const sanitizedLensName = lens.name.replace(/\//g, '-');
-  
-  // Hardcode the storage bucket name to prevent config loading issues.
-  const storageBucket = "studio-3861763439-b3374.appspot.com";
-  const pdfUrl = `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`;
+  useEffect(() => {
+    if (lens && firebaseApp) {
+      setIsLoadingPdf(true);
+      setPdfUrl(null);
+      
+      const sanitizedLensName = lens.name.replace(/\//g, '-');
+      const storage = getStorage(firebaseApp);
+      const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
+
+      getDownloadURL(pdfRef)
+        .then((url) => {
+          setPdfUrl(url);
+        })
+        .catch((error) => {
+          // It's okay if the file is not found, we just won't show the button.
+          if (error.code !== 'storage/object-not-found') {
+            console.error("Error fetching PDF URL:", error);
+          }
+          setPdfUrl(null);
+        })
+        .finally(() => {
+          setIsLoadingPdf(false);
+        });
+    }
+  }, [lens, firebaseApp, open]); // Re-fetch when lens or open state changes
+
+  if (!lens) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -59,12 +83,21 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             <Separator />
             <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">PDF Document</p>
-                <Button asChild variant="outline" size="sm">
-                  <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                    <FileText className="mr-2 h-4 w-4" />
-                    View
-                  </a>
-                </Button>
+                {isLoadingPdf ? (
+                  <Button variant="outline" size="sm" disabled>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </Button>
+                ) : pdfUrl ? (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                      <FileText className="mr-2 h-4 w-4" />
+                      View
+                    </a>
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not Available</p>
+                )}
             </div>
         </div>
       </SheetContent>
