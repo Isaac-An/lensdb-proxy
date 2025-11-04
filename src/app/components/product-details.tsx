@@ -27,9 +27,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
   // Replace characters that are invalid in filenames, like '/', with a safe character like '-'.
   const sanitizedLensName = lens.name.replace(/\//g, '-');
   
-  // Manually construct the Firebase Storage URL.
-  // This is a more direct approach. If the file exists, it will open.
-  // If not, the user gets a clear "Not Found" error from Firebase Storage.
+  // Manually construct the correct Firebase Storage URL.
   const storageBucket = firebaseConfig.storageBucket;
   const pdfUrl = `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`;
 
