@@ -10,9 +10,8 @@ import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import { useFirestore, useCollection, useMemoFirebase, errorEmitter, FirestorePermissionError, useUser } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, DocumentData, query } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, DocumentData } from 'firebase/firestore';
 import { UpdateConfirmationDialog, type LensForUpdate } from './update-confirmation-dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 
 export type Filters = {
@@ -107,7 +106,6 @@ export function DashboardPage() {
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const [lensesToUpdate, setLensesToUpdate] = useState<LensForUpdate[]>([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
-  const [isClearConfirmOpen, setClearConfirmOpen] = useState(false);
 
 
   const { toast } = useToast();
@@ -236,48 +234,6 @@ export function DashboardPage() {
   
     setUpdateConfirmOpen(false);
     setLensesToUpdate([]);
-  };
-
-  const handleClearDatabase = async () => {
-    setClearConfirmOpen(false);
-    if (!firestore || !productsCollection) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Firestore connection not available.",
-        });
-        return;
-    }
-
-    toast({
-        title: "Clearing Database...",
-        description: "Please wait while all product data is being removed.",
-    });
-
-    try {
-        const q = query(productsCollection);
-        const querySnapshot = await getDocs(q);
-        const batch = writeBatch(firestore);
-        querySnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        toast({
-            title: "Database Cleared",
-            description: "All product data has been successfully deleted.",
-        });
-    } catch (error: any) {
-        const permissionError = new FirestorePermissionError({
-          path: 'products',
-          operation: 'delete'
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        toast({
-            variant: "destructive",
-            title: "Error Clearing Database",
-            description: "Could not clear database. You may not have the required permissions.",
-        });
-    }
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,7 +417,6 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
           onImport={handleImport}
-          onClear={() => setClearConfirmOpen(true)}
           isImportDisabled={isUserLoading}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -491,24 +446,6 @@ export function DashboardPage() {
           })
         }}
       />
-
-      <AlertDialog open={isClearConfirmOpen} onOpenChange={setClearConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all
-              product data from the database.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearDatabase}>
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
