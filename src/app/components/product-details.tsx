@@ -32,8 +32,12 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
     if (open && lens && firebaseApp) {
       const storage = getStorage(firebaseApp);
-      // Create a reference to the file based on the lens name
-      const pdfRef = ref(storage, `${lens.name}.pdf`);
+      // Sanitize the lens name to create a valid filename.
+      // Replace characters that are invalid in filenames, like '/', with a safe character like '-'.
+      const sanitizedLensName = lens.name.replace(/\//g, '-');
+      
+      // Create a reference to the file based on the sanitized lens name
+      const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
 
       // Get the download URL
       getDownloadURL(pdfRef)
@@ -44,7 +48,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
         .catch((error) => {
           // If the file doesn't exist or another error occurs, log it and do nothing.
           // The button won't be rendered if pdfUrl remains null.
-          console.log(`No PDF found for ${lens.name}:`, error.code);
+          console.log(`No PDF found for ${lens.name} (checked as ${sanitizedLensName}.pdf):`, error.code);
         });
     }
   }, [lens, open, firebaseApp]);
