@@ -27,7 +27,14 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
   const firebaseApp = useFirebaseApp();
 
   useEffect(() => {
-    if (lens && firebaseApp) {
+    // Reset state when the sheet is closed or the lens changes
+    if (!open || !lens) {
+      setPdfUrl(null);
+      setIsLoadingPdf(false);
+      return;
+    }
+
+    if (firebaseApp) {
       setIsLoadingPdf(true);
       setPdfUrl(null);
       
@@ -40,9 +47,11 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
           setPdfUrl(url);
         })
         .catch((error) => {
-          // It's okay if the file is not found, we just won't show the button.
+          // If the object is not found, it's not an error we need to log.
+          // We just won't show the link.
           if (error.code !== 'storage/object-not-found') {
-            console.error("Error fetching PDF URL:", error);
+            // For other errors, you might want to log them for debugging.
+            // console.error("Error fetching PDF URL:", error);
           }
           setPdfUrl(null);
         })
@@ -50,7 +59,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
           setIsLoadingPdf(false);
         });
     }
-  }, [lens, firebaseApp, open]); // Re-fetch when lens or open state changes
+  }, [lens, firebaseApp, open]); // Rerun when lens, app, or open state changes
 
   if (!lens) return null;
 
