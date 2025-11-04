@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { Lens } from '@/app/lib/types';
 import {
   Sheet,
@@ -8,13 +8,11 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import { useFirebaseApp } from '@/firebase';
-import { getStorage, ref, getDownloadURL } from 'firebase/storage';
+import { firebaseConfig } from '@/firebase/config';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -23,38 +21,17 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const firebaseApp = useFirebaseApp();
-
-  useEffect(() => {
-    // Reset pdfUrl when the sheet is closed or the lens changes
-    setPdfUrl(null);
-
-    if (open && lens && firebaseApp) {
-      const storage = getStorage(firebaseApp);
-      // Sanitize the lens name to create a valid filename.
-      // Replace characters that are invalid in filenames, like '/', with a safe character like '-'.
-      const sanitizedLensName = lens.name.replace(/\//g, '-');
-      
-      // Create a reference to the file based on the sanitized lens name
-      const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
-
-      // Get the download URL
-      getDownloadURL(pdfRef)
-        .then((url) => {
-          // If successful, set the URL in state
-          setPdfUrl(url);
-        })
-        .catch((error) => {
-          // If the file doesn't exist or another error occurs, log it and do nothing.
-          // The button won't be rendered if pdfUrl remains null.
-          console.log(`No PDF found for ${lens.name} (checked as ${sanitizedLensName}.pdf):`, error.code);
-        });
-    }
-  }, [lens, open, firebaseApp]);
-
-
   if (!lens) return null;
+
+  // Sanitize the lens name for use in a URL path component.
+  // Replace characters that are invalid in filenames, like '/', with a safe character like '-'.
+  const sanitizedLensName = lens.name.replace(/\//g, '-');
+  
+  // Manually construct the Firebase Storage URL.
+  // This is a more direct approach. If the file exists, it will open.
+  // If not, the user gets a clear "Not Found" error from Firebase Storage.
+  const storageBucket = firebaseConfig.storageBucket;
+  const pdfUrl = `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -82,25 +59,25 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             <Separator />
             <DetailItem label="Mount Type" value={lens.mountType} />
             <DetailItem label="Lens Structure" value={lens.lensStructure} />
+            <Separator />
+            <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">PDF Document</p>
+                <Button asChild variant="outline" size="sm">
+                  <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                    <FileText className="mr-2 h-4 w-4" />
+                    View
+                  </a>
+                </Button>
+            </div>
         </div>
-        {pdfUrl && (
-          <SheetFooter className="pt-6">
-            <Button asChild className="w-full">
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                <FileText className="mr-2 h-4 w-4" />
-                View PDF
-              </a>
-            </Button>
-          </SheetFooter>
-        )}
       </SheetContent>
     </Sheet>
   );
 }
 
-const DetailItem = ({ label, value, isPrimary = false }: { label: string, value: React.ReactNode, isPrimary?: boolean }) => (
+const DetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
     <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className={`text-sm font-medium ${isPrimary ? 'text-primary' : 'text-foreground'}`}>{value}</p>
+        <p className="text-sm font-medium text-foreground">{value}</p>
     </div>
-)
+);
