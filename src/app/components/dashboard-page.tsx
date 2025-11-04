@@ -41,7 +41,7 @@ const initialFilters: Filters = {
 const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name' | 'price'>)[] = [
     'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
     'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
-    'chiefRayAngle', 'mountType', 'lensStructure'
+    'chiefRayAngle', 'mountType', 'lensStructure', 'pdfUrl'
 ];
 
 const NUMERIC_PROPERTIES: (keyof Lens)[] = [
@@ -291,6 +291,7 @@ export function DashboardPage() {
             mounttype: 'mountType', mount: 'mountType',
             lensstructure: 'lensStructure',
             price: 'price',
+            pdfurl: 'pdfUrl', pdf: 'pdfUrl',
           };
           
           const fileLenses = dataRows.map((row: any[]) => {

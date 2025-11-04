@@ -8,8 +8,11 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetFooter,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -47,6 +50,16 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             <DetailItem label="Mount Type" value={lens.mountType} />
             <DetailItem label="Lens Structure" value={lens.lensStructure} />
         </div>
+        {lens.pdfUrl && (
+          <SheetFooter className="pt-6">
+            <Button asChild className="w-full">
+              <a href={lens.pdfUrl} target="_blank" rel="noopener noreferrer">
+                <FileText className="mr-2 h-4 w-4" />
+                View PDF
+              </a>
+            </Button>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );
