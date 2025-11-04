@@ -69,10 +69,6 @@
         "price": {
           "type": "number",
           "description": "Price of the product lens."
-        },
-        "pdfUrl": {
-          "type": "string",
-          "description": "URL to the product's PDF specification document."
         }
       },
       "required": [

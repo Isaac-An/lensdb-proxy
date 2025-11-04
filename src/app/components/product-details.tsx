@@ -12,7 +12,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import { firebaseConfig } from '@/firebase/config';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -27,8 +26,8 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
   // Replace characters that are invalid in filenames, like '/', with a safe character like '-'.
   const sanitizedLensName = lens.name.replace(/\//g, '-');
   
-  // Manually construct the correct Firebase Storage URL.
-  const storageBucket = firebaseConfig.storageBucket;
+  // Hardcode the storage bucket name to prevent config loading issues.
+  const storageBucket = "studio-3861763439-b3374.appspot.com";
   const pdfUrl = `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`;
 
   return (

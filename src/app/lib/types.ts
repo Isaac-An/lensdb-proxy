@@ -14,5 +14,4 @@ export interface Lens {
   chiefRayAngle: number;
   mountType: string;
   lensStructure: string;
-  pdfUrl?: string; // This can now be safely removed, but leaving it doesn't hurt.
 }
