@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -25,9 +26,10 @@ type FilterSidebarProps = {
   resetFilters: () => void;
   sensorSizes: string[];
   mountTypes: string[];
+  sensorNames: string[];
 };
 
-export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes }: FilterSidebarProps) {
+export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, sensorNames }: FilterSidebarProps) {
   
   const handleRangeChange = (
     field: 'efl' | 'fNo' | 'fovD' | 'ttl',
@@ -88,6 +90,23 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
                       <SelectItem value="all">All Sizes</SelectItem>
                       {sensorSizes.map(size => (
                         <SelectItem key={size} value={size}>{size}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sensor Name</Label>
+                  <Select
+                    value={filters.sensorName}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, sensorName: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sensor name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Names</SelectItem>
+                      {sensorNames.map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

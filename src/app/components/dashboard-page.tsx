@@ -17,6 +17,7 @@ import { UpdateConfirmationDialog, type LensForUpdate } from './update-confirmat
 export type Filters = {
   searchQuery: string;
   sensorSize: string;
+  sensorName: string;
   mountType: string;
   efl: [number | null, number | null];
   fNo: [number | null, number | null];
@@ -28,6 +29,7 @@ export type Filters = {
 const initialFilters: Filters = {
   searchQuery: '',
   sensorSize: 'all',
+  sensorName: 'all',
   mountType: 'all',
   efl: [null, null],
   fNo: [null, null],
@@ -125,8 +127,8 @@ export function DashboardPage() {
     return rawLenses.map(doc => mapDocToLens({ id: doc.id, data: () => doc }));
   }, [rawLenses]);
   
-  const { sensorSizes, mountTypes } = useMemo(() => {
-    if (!lenses) return { sensorSizes: [], mountTypes: [] };
+  const { sensorSizes, mountTypes, sensorNames } = useMemo(() => {
+    if (!lenses) return { sensorSizes: [], mountTypes: [], sensorNames: [] };
     
     const customSensorSort = (a: string, b: string) => {
       const regex = /(\d+)\/(\d+(\.\d+)?)/;
@@ -149,16 +151,25 @@ export function DashboardPage() {
       return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
     }).filter(Boolean);
 
+    const sensorNames = [...new Set(lenses.map(l => {
+        const size = l.sensorSize || '';
+        const parts = size.split(' ');
+        if (parts.length > 1 && parts[0].includes('"')) {
+            return parts[1];
+        }
+        return null;
+    }).filter(Boolean) as string[])].sort();
+
     const uniqueSensorSizes = [...new Set(baseSensorSizes)];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
-    return { sensorSizes: sortedSensorSizes, mountTypes };
+    return { sensorSizes: sortedSensorSizes, mountTypes, sensorNames };
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
     if (!lenses) return [];
   
-    const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder } = filters;
+    const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder, sensorName } = filters;
   
     let processedLenses = [...lenses];
   
@@ -178,6 +189,10 @@ export function DashboardPage() {
       }
       
       if (sensorSize !== 'all' && !lens.sensorSize.startsWith(sensorSize)) {
+        return false;
+      }
+
+      if (sensorName !== 'all' && !lens.sensorSize.includes(sensorName)) {
         return false;
       }
 
@@ -410,6 +425,7 @@ export function DashboardPage() {
             resetFilters={() => setFilters(initialFilters)}
             sensorSizes={sensorSizes}
             mountTypes={mountTypes}
+            sensorNames={sensorNames}
           />
       </div>
       <div className="w-2/3 flex flex-col">
