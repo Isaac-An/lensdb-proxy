@@ -18,7 +18,8 @@ if (!admin.apps.length) {
 }
 
 type GetStorageFileUrlInput = {
-  fileName: string;
+  productName: string;
+  pdfUrlField: string | undefined;
 };
 
 type GetStorageFileUrlOutput = {
@@ -26,27 +27,43 @@ type GetStorageFileUrlOutput = {
 };
 
 export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<GetStorageFileUrlOutput> {
-  const { fileName } = input;
-  console.log(`[Server Action] Attempting to get signed URL for: "${fileName}"`);
-  
+  const { productName, pdfUrlField } = input;
+  console.log(`[Server Action] Received request for product: "${productName}", pdfUrlField: "${pdfUrlField}"`);
+
   if (!admin.apps.length) {
       console.error("[Server Action] Firebase admin is not initialized.");
       return { url: null };
   }
 
+  // 1. If pdfUrlField is already a full HTTPS URL, return it directly.
+  if (pdfUrlField && pdfUrlField.startsWith('https://')) {
+    console.log(`[Server Action] pdfUrlField is a direct URL. Returning: "${pdfUrlField}"`);
+    return { url: pdfUrlField };
+  }
+
+  // 2. Determine the filename to fetch from Storage.
+  let fileNameToFetch: string;
+  if (pdfUrlField && pdfUrlField.trim()) {
+    // Use the value from pdfUrlField if it's a filename.
+    fileNameToFetch = pdfUrlField.trim();
+  } else {
+    // Otherwise, generate it from the product name.
+    fileNameToFetch = `${productName.trim()}.pdf`;
+  }
+  
+  console.log(`[Server Action] Attempting to get signed URL for: "${fileNameToFetch}"`);
+
   try {
     const bucket = admin.storage().bucket();
-    const file = bucket.file(fileName);
+    const file = bucket.file(fileNameToFetch);
 
-    // Check if the file exists first.
     const [exists] = await file.exists();
     if (!exists) {
-      console.log(`[Server Action] File not found in Firebase Storage: "${fileName}"`);
+      console.log(`[Server Action] File not found in Firebase Storage: "${fileNameToFetch}"`);
       return { url: null };
     }
 
-    console.log(`[Server Action] File found: "${fileName}". Generating signed URL.`);
-    // Get a signed URL that expires in 15 minutes.
+    console.log(`[Server Action] File found: "${fileNameToFetch}". Generating signed URL.`);
     const [url] = await file.getSignedUrl({
       action: 'read',
       expires: Date.now() + 15 * 60 * 1000, // 15 minutes
@@ -54,8 +71,7 @@ export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<
 
     return { url };
   } catch (error) {
-    console.error(`[Server Action] Error getting signed URL for "${fileName}":`, error);
-    // In case of any other error, return null.
+    console.error(`[Server Action] Error getting signed URL for "${fileNameToFetch}":`, error);
     return { url: null };
   }
 }

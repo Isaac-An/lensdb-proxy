@@ -36,38 +36,20 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setIsLoadingPdf(true);
             setPdfUrl(null);
 
-            let fileNameToFetch: string | undefined;
-
-            if (lens.pdfUrl && lens.pdfUrl.trim() && !lens.pdfUrl.startsWith('https://')) {
-                // Use pdfUrl as filename if it exists and is not a full URL
-                fileNameToFetch = lens.pdfUrl.trim();
-            } else if (!lens.pdfUrl || lens.pdfUrl.trim() === '') {
-                // Generate filename from name if pdfUrl is empty
-                fileNameToFetch = `${lens.name.trim()}.pdf`;
+            try {
+                // The server action now contains all the logic.
+                // Just pass the name and the pdfUrl field.
+                const result = await getStorageFileUrl({
+                    productName: lens.name,
+                    pdfUrlField: lens.pdfUrl,
+                });
+                setPdfUrl(result.url);
+            } catch (error) {
+                console.error("Error calling getStorageFileUrl action:", error);
+                setPdfUrl(null);
+            } finally {
+                setIsLoadingPdf(false);
             }
-
-            // Attempt to fetch from storage if we determined a filename
-            if (fileNameToFetch) {
-                try {
-                    const result = await getStorageFileUrl({ fileName: fileNameToFetch });
-                    if (result.url) {
-                        setPdfUrl(result.url);
-                        setIsLoadingPdf(false);
-                        return; // Success, we are done.
-                    }
-                } catch (error) {
-                    console.error("Error fetching signed URL from storage:", error);
-                }
-            }
-
-            // Fallback: If fetch failed or wasn't attempted, check if pdfUrl is a direct link
-            if (lens.pdfUrl && lens.pdfUrl.startsWith('https://')) {
-                setPdfUrl(lens.pdfUrl);
-            } else {
-                setPdfUrl(null); // Ensure no URL is set if all attempts fail
-            }
-
-            setIsLoadingPdf(false);
         };
 
         fetchPdfUrl();
