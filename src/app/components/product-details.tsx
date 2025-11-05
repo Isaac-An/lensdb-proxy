@@ -36,18 +36,17 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setPdfUrl(null); 
             
             try {
-                // Get the storage service from the same app instance as firestore
                 const storage = getStorage(firestore.app);
                 
-                // Sanitize the lens name to be safe for a URL path component
-                const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-._~]/g, '-');
+                // Trim whitespace and replace slashes to create a safe filename.
+                const sanitizedLensName = lens.name.trim().replace(/\//g, '-');
                 const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
                 
                 const url = await getDownloadURL(pdfRef);
                 setPdfUrl(url);
             } catch (error: any) {
-                // 'storage/object-not-found' is an expected case if a PDF doesn't exist.
-                // For any other error, we'll also just treat it as 'not available'.
+                // If the file is not found, we just show "Not Available".
+                // We don't need to log this specific error as it's an expected case.
                 setPdfUrl(null);
             } finally {
                 setIsLoadingPdf(false);
