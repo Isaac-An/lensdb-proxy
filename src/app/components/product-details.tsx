@@ -36,9 +36,10 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setIsLoadingPdf(true);
             setPdfUrl(null); // Reset on new lens
             try {
-                // Standardize filename generation by replacing spaces and slashes with hyphens.
-                const sanitizedName = lens.name.trim().replace(/[\/\s]/g, '-');
-                const fileName = `${sanitizedName}.pdf`;
+                // Prioritize the pdfUrl field if it exists, otherwise generate from name.
+                const fileName = lens.pdfUrl
+                  ? lens.pdfUrl.trim()
+                  : `${lens.name.trim().replace(/[\/\s]/g, '-')}.pdf`;
 
                 if (fileName) {
                     const result = await getPdfUrl({ fileName });
@@ -48,6 +49,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
                 }
             } catch (error) {
                 // If the flow throws an error (e.g., file not found), we'll catch it here.
+                console.error("Error fetching PDF URL:", error);
                 setPdfUrl(null);
             } finally {
                 setIsLoadingPdf(false);
