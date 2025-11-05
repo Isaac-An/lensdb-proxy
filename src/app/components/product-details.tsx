@@ -27,39 +27,36 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
   const firebaseApp = useFirebaseApp();
 
   useEffect(() => {
-    // Reset state when the sheet is closed or the lens changes
-    if (!open || !lens) {
+    if (!open || !lens || !firebaseApp) {
       setPdfUrl(null);
       setIsLoadingPdf(false);
       return;
     }
 
-    if (firebaseApp) {
+    const fetchPdfUrl = async () => {
       setIsLoadingPdf(true);
       setPdfUrl(null);
-      
-      const sanitizedLensName = lens.name.replace(/\//g, '-');
-      const storage = getStorage(firebaseApp);
-      const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
 
-      getDownloadURL(pdfRef)
-        .then((url) => {
-          setPdfUrl(url);
-        })
-        .catch((error) => {
-          // If the object is not found, it's not an error we need to log.
-          // We just won't show the link.
-          if (error.code !== 'storage/object-not-found') {
-            // For other errors, you might want to log them for debugging.
-            // console.error("Error fetching PDF URL:", error);
-          }
-          setPdfUrl(null);
-        })
-        .finally(() => {
-          setIsLoadingPdf(false);
-        });
-    }
-  }, [lens, firebaseApp, open]); // Rerun when lens, app, or open state changes
+      try {
+        // Sanitize the lens name to create a valid filename.
+        // Replace any character that is not a letter, number, or hyphen with a hyphen.
+        const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
+        const storage = getStorage(firebaseApp);
+        const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
+        
+        const url = await getDownloadURL(pdfRef);
+        setPdfUrl(url);
+      } catch (error: any) {
+        // We only expect 'storage/object-not-found', other errors might be worth logging.
+        // For this app, we will silently fail and just not show a link.
+        setPdfUrl(null);
+      } finally {
+        setIsLoadingPdf(false);
+      }
+    };
+
+    fetchPdfUrl();
+  }, [lens, firebaseApp, open]);
 
   if (!lens) return null;
 
