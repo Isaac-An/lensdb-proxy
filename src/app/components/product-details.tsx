@@ -40,10 +40,18 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
             if (fileNameToFetch) {
                 try {
+                    // Always try to fetch from storage first
                     const result = await getStorageFileUrl({ fileName: fileNameToFetch });
-                    setPdfUrl(result.url);
+                    
+                    if (result.url) {
+                        setPdfUrl(result.url);
+                    } else if (fileNameToFetch.startsWith('http')) {
+                        // Fallback to direct URL if storage fetch fails and it's a valid URL
+                        console.log(`Falling back to direct URL for: ${fileNameToFetch}`);
+                        setPdfUrl(fileNameToFetch);
+                    }
                 } catch (error) {
-                    console.error("Error fetching PDF URL via server action:", error);
+                    console.error("Error resolving PDF URL:", error);
                     setPdfUrl(null);
                 }
             }
