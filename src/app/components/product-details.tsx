@@ -35,24 +35,34 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
         const fetchPdfUrl = async () => {
             setIsLoadingPdf(true);
             setPdfUrl(null);
-            
+
             let fileNameToFetch: string | undefined;
 
             if (lens.pdfUrl && lens.pdfUrl.trim()) {
-                // Use the pdfUrl field if it has a value
                 fileNameToFetch = lens.pdfUrl.trim();
             } else {
-                // Otherwise, generate the filename from the lens name
                 fileNameToFetch = `${lens.name.trim()}.pdf`;
             }
 
             if (fileNameToFetch) {
                 try {
                     const result = await getStorageFileUrl({ fileName: fileNameToFetch });
-                    setPdfUrl(result.url); 
+                    if (result.url) {
+                        setPdfUrl(result.url);
+                    } else if (lens.pdfUrl?.startsWith('https://')) {
+                        // Fallback to using pdfUrl directly if it's a full URL
+                        setPdfUrl(lens.pdfUrl);
+                    } else {
+                        setPdfUrl(null);
+                    }
                 } catch (error) {
-                    console.error("Error fetching signed URL:", error);
-                    setPdfUrl(null);
+                    console.error("Error fetching or falling back to PDF URL:", error);
+                    // Also attempt fallback on error
+                    if (lens.pdfUrl?.startsWith('https://')) {
+                        setPdfUrl(lens.pdfUrl);
+                    } else {
+                        setPdfUrl(null);
+                    }
                 }
             }
 
