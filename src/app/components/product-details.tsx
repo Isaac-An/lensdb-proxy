@@ -35,7 +35,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
     const fetchPdfUrl = async () => {
       setIsLoadingPdf(true);
-      setPdfUrl(null);
+      setPdfUrl(null); // Reset on new lens selection
 
       try {
         // Sanitize the lens name to create a valid filename.
