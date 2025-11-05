@@ -35,19 +35,14 @@ export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<
       return { url: null };
   }
 
-  // 1. If pdfUrlField is already a full HTTPS URL, return it directly.
-  if (pdfUrlField && pdfUrlField.startsWith('https://')) {
-    console.log(`[Server Action] pdfUrlField is a direct URL. Returning: "${pdfUrlField}"`);
-    return { url: pdfUrlField };
-  }
-
-  // 2. Determine the filename to fetch from Storage.
+  // Determine the filename to fetch from Storage.
+  // The logic is now simplified: use pdfUrlField if it exists, otherwise generate from productName.
+  // The field should contain the exact filename.
   let fileNameToFetch: string;
   if (pdfUrlField && pdfUrlField.trim()) {
-    // Use the value from pdfUrlField if it's a filename.
     fileNameToFetch = pdfUrlField.trim();
   } else {
-    // Otherwise, generate it from the product name.
+    // Fallback to generating filename from the product name
     fileNameToFetch = `${productName.trim()}.pdf`;
   }
   
