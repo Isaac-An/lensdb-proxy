@@ -39,12 +39,11 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             let fileNameToFetch: string | undefined;
 
             if (lens.pdfUrl && lens.pdfUrl.trim()) {
+                // Use the pdfUrl field if it has a value
                 fileNameToFetch = lens.pdfUrl.trim();
             } else {
-                const sanitizedLensName = lens.name
-                    .trim()
-                    .replace(/[^a-zA-Z0-9._-]/g, '-');
-                fileNameToFetch = `${sanitizedLensName}.pdf`;
+                // Otherwise, generate the filename from the lens name
+                fileNameToFetch = `${lens.name.trim()}.pdf`;
             }
 
             if (fileNameToFetch) {
