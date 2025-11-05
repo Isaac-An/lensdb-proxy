@@ -11,6 +11,15 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
+import { firebaseConfig } from '@/firebase/config';
+
+// Initialize firebase-admin if it hasn't been already.
+// This is safe to run on the server.
+if (!admin.apps.length) {
+  admin.initializeApp({
+    storageBucket: firebaseConfig.storageBucket,
+  });
+}
 
 export const GetPdfUrlInputSchema = z.object({
   fileName: z.string().describe('The name of the PDF file in Firebase Storage.'),
@@ -52,7 +61,6 @@ const getPdfUrlFlow = ai.defineFlow(
 
       return { url };
     } catch (error) {
-      console.error('Error getting signed URL:', error);
       // In case of any other error, return null to prevent client-side crashes.
       return { url: null };
     }
