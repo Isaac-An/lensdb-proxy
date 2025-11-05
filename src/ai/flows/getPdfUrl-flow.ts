@@ -11,15 +11,23 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
 import { firebaseConfig } from '@/firebase/config';
 
-// Initialize firebase-admin if it hasn't been already.
-// This is safe to run on the server.
+// Safely initialize firebase-admin on the server.
 if (!admin.apps.length) {
-  admin.initializeApp({
-    storageBucket: firebaseConfig.storageBucket,
-  });
+  try {
+    // In a Google Cloud environment, the credentials can be found automatically.
+    // For local development, you'd set the GOOGLE_APPLICATION_CREDENTIALS env var.
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+      storageBucket: firebaseConfig.storageBucket,
+    });
+  } catch (e) {
+    console.error('Firebase Admin initialization failed:', e);
+  }
 }
+
 
 export const GetPdfUrlInputSchema = z.object({
   fileName: z.string().describe('The name of the PDF file in Firebase Storage.'),
@@ -61,6 +69,7 @@ const getPdfUrlFlow = ai.defineFlow(
 
       return { url };
     } catch (error) {
+      console.error(`Error getting signed URL for ${fileName}:`, error);
       // In case of any other error, return null to prevent client-side crashes.
       return { url: null };
     }
