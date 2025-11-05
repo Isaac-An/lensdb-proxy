@@ -12,7 +12,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import { useFirebaseApp } from '@/firebase';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -21,19 +20,15 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-  const firebaseApp = useFirebaseApp();
-
   if (!lens) return null;
 
   // Sanitize the lens name to create a valid filename for the URL.
   // Replace any character that is not a letter, number, or hyphen with a hyphen.
   const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
   
-  // Directly construct the public URL. This is more reliable than getDownloadURL.
-  const storageBucket = firebaseApp?.options.storageBucket;
-  const pdfUrl = storageBucket 
-    ? `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`
-    : null;
+  // Hardcode the storage bucket to ensure the URL is always correct.
+  const storageBucket = 'studio-3861763439-b3374.appspot.com';
+  const pdfUrl = `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
