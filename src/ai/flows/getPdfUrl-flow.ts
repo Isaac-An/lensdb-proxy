@@ -4,29 +4,13 @@
  * @fileOverview A server-side flow to retrieve a signed URL for a PDF from Firebase Storage.
  *
  * - getPdfUrl - A function that returns a signed URL for a given filename.
- * - GetPdfUrlInput - The input schema for the getPdfUrl function.
- * - GetPdfUrlOutput - The output schema for the getPdfUrl function.
+ * - GetPdfUrlInput - The input type for the getPdfUrl function.
+ * - GetPdfUrlOutput - The return type for the getPdfUrl function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
-import { firebaseConfig } from '@/firebase/config';
-
-// Safely initialize firebase-admin on the server.
-if (!admin.apps.length) {
-  try {
-    // In a Google Cloud environment, the credentials can be found automatically.
-    // For local development, you'd set the GOOGLE_APPLICATION_CREDENTIALS env var.
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      storageBucket: firebaseConfig.storageBucket,
-    });
-  } catch (e) {
-    console.error('Firebase Admin initialization failed:', e);
-  }
-}
-
 
 const GetPdfUrlInputSchema = z.object({
   fileName: z.string().describe('The name of the PDF file in Firebase Storage.'),
@@ -57,6 +41,7 @@ const getPdfUrlFlow = ai.defineFlow(
       // Check if the file exists first.
       const [exists] = await file.exists();
       if (!exists) {
+        console.log(`File not found: ${fileName}`);
         return { url: null };
       }
 
