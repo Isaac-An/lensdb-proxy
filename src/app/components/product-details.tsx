@@ -34,21 +34,33 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
         const fetchPdfUrl = async () => {
             setIsLoadingPdf(true);
-            setPdfUrl(null); 
+            setPdfUrl(null);
             
             const fileNameToFetch = lens.pdfUrl?.trim();
 
             if (fileNameToFetch) {
                 try {
+                    // 1. First, try to get a signed URL from Firebase Storage
                     const result = await getPdfUrl({ fileName: fileNameToFetch });
-                    setPdfUrl(result.url);
+                    
+                    if (result.url) {
+                        setPdfUrl(result.url);
+                    } else {
+                        // 2. If storage fetch fails, check if pdfUrl is a direct link
+                        if (fileNameToFetch.startsWith('http')) {
+                            setPdfUrl(fileNameToFetch);
+                        }
+                    }
                 } catch (error) {
-                    console.error("Error fetching PDF URL for filename:", error);
-                    setPdfUrl(null);
+                    console.error("Error fetching PDF URL:", error);
+                    // As a final fallback, try to use the URL directly if an error occurs
+                    if (fileNameToFetch.startsWith('http')) {
+                        setPdfUrl(fileNameToFetch);
+                    } else {
+                        setPdfUrl(null);
+                    }
                 }
             }
-            // If fileNameToFetch is null or empty, the URL will remain null,
-            // and "Not Available" will be shown.
 
             setIsLoadingPdf(false);
         };
