@@ -13,8 +13,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { useFirebaseApp } from '@/firebase';
+import { getPdfUrl } from '@/ai/flows/getPdfUrl-flow';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -23,12 +22,11 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-    const firebaseApp = useFirebaseApp();
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
     useEffect(() => {
-        if (!open || !lens || !firebaseApp) {
+        if (!open || !lens) {
             setPdfUrl(null);
             setIsLoadingPdf(false);
             return;
@@ -36,19 +34,13 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
         const fetchPdfUrl = async () => {
             setIsLoadingPdf(true);
-            setPdfUrl(null);
-            
+            setPdfUrl(null); // Reset on new lens
             try {
-                const storage = getStorage(firebaseApp);
                 const sanitizedLensName = lens.name.trim().replace(/\//g, '-');
-                const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
-                
-                const url = await getDownloadURL(pdfRef);
-                setPdfUrl(url);
-            } catch (error: any) {
-                if (error.code !== 'storage/object-not-found') {
-                    // Log other unexpected errors if you have a logging service
-                }
+                const result = await getPdfUrl({ fileName: `${sanitizedLensName}.pdf` });
+                setPdfUrl(result.url);
+            } catch (error) {
+                // If the flow throws an error (e.g., file not found), we'll catch it here.
                 setPdfUrl(null);
             } finally {
                 setIsLoadingPdf(false);
@@ -56,7 +48,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
         };
 
         fetchPdfUrl();
-    }, [lens, open, firebaseApp]);
+    }, [lens, open]);
 
     if (!lens) return null;
 
