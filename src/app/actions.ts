@@ -27,8 +27,10 @@ type GetStorageFileUrlOutput = {
 
 export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<GetStorageFileUrlOutput> {
   const { fileName } = input;
+  console.log(`[Server Action] Attempting to get signed URL for: "${fileName}"`);
+  
   if (!admin.apps.length) {
-      console.error("Firebase admin is not initialized.");
+      console.error("[Server Action] Firebase admin is not initialized.");
       return { url: null };
   }
 
@@ -41,10 +43,11 @@ export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<
     // Check if the file exists first.
     const [exists] = await file.exists();
     if (!exists) {
-      console.log(`File not found in Firebase Storage: ${safeFileName}`);
+      console.log(`[Server Action] File not found in Firebase Storage: "${safeFileName}"`);
       return { url: null };
     }
 
+    console.log(`[Server Action] File found: "${safeFileName}". Generating signed URL.`);
     // Get a signed URL that expires in 15 minutes.
     const [url] = await file.getSignedUrl({
       action: 'read',
@@ -53,7 +56,7 @@ export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<
 
     return { url };
   } catch (error) {
-    console.error(`Error getting signed URL for ${fileName}:`, error);
+    console.error(`[Server Action] Error getting signed URL for "${fileName}":`, error);
     // In case of any other error, return null.
     return { url: null };
   }

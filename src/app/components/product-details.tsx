@@ -36,17 +36,21 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setIsLoadingPdf(true);
             setPdfUrl(null);
             
-            // Determine the filename: use pdfUrl if it exists, otherwise generate from name.
-            let fileNameToFetch = lens.pdfUrl?.trim();
-            if (!fileNameToFetch) {
-                const sanitizedLensName = lens.name.trim().replace(/\//g, '-');
+            let fileNameToFetch: string | undefined;
+
+            if (lens.pdfUrl && lens.pdfUrl.trim()) {
+                fileNameToFetch = lens.pdfUrl.trim();
+            } else {
+                const sanitizedLensName = lens.name
+                    .trim()
+                    .replace(/[^a-zA-Z0-9._-]/g, '-');
                 fileNameToFetch = `${sanitizedLensName}.pdf`;
             }
 
             if (fileNameToFetch) {
                 try {
                     const result = await getStorageFileUrl({ fileName: fileNameToFetch });
-                    setPdfUrl(result.url); // Will be the signed URL or null
+                    setPdfUrl(result.url); 
                 } catch (error) {
                     console.error("Error fetching signed URL:", error);
                     setPdfUrl(null);
