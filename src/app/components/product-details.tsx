@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import type { Lens } from '@/app/lib/types';
 import {
   Sheet,
@@ -11,8 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2 } from 'lucide-react';
-import { getStorage, ref, getDownloadURL } from 'firebase/storage';
+import { FileText } from 'lucide-react';
 import { useFirebaseApp } from '@/firebase';
 
 type ProductDetailsProps = {
@@ -22,43 +21,19 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const firebaseApp = useFirebaseApp();
 
-  useEffect(() => {
-    if (!open || !lens || !firebaseApp) {
-      setPdfUrl(null);
-      setIsLoadingPdf(false);
-      return;
-    }
-
-    const fetchPdfUrl = async () => {
-      setIsLoadingPdf(true);
-      setPdfUrl(null); // Reset on new lens selection
-
-      try {
-        // Sanitize the lens name to create a valid filename.
-        // Replace any character that is not a letter, number, or hyphen with a hyphen.
-        const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
-        const storage = getStorage(firebaseApp);
-        const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
-        
-        const url = await getDownloadURL(pdfRef);
-        setPdfUrl(url);
-      } catch (error: any) {
-        // We only expect 'storage/object-not-found', other errors might be worth logging.
-        // For this app, we will silently fail and just not show a link.
-        setPdfUrl(null);
-      } finally {
-        setIsLoadingPdf(false);
-      }
-    };
-
-    fetchPdfUrl();
-  }, [lens, firebaseApp, open]);
-
   if (!lens) return null;
+
+  // Sanitize the lens name to create a valid filename for the URL.
+  // Replace any character that is not a letter, number, or hyphen with a hyphen.
+  const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
+  
+  // Directly construct the public URL. This is more reliable than getDownloadURL.
+  const storageBucket = firebaseApp?.options.storageBucket;
+  const pdfUrl = storageBucket 
+    ? `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -89,12 +64,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             <Separator />
             <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">PDF Document</p>
-                {isLoadingPdf ? (
-                  <Button variant="outline" size="sm" disabled>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
-                  </Button>
-                ) : pdfUrl ? (
+                {pdfUrl ? (
                   <Button asChild variant="outline" size="sm">
                     <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
                       <FileText className="mr-2 h-4 w-4" />
