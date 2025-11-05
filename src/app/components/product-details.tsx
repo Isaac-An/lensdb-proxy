@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Lens } from '@/app/lib/types';
 import {
   Sheet,
@@ -11,7 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { useFirebaseApp } from '@/firebase';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -20,60 +22,87 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-  if (!lens) return null;
+    const firebaseApp = useFirebaseApp();
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
-  // Sanitize the lens name to create a valid filename for the URL.
-  // Replace any character that is not a letter, number, or hyphen with a hyphen.
-  const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
-  
-  // Hardcode the storage bucket to ensure the URL is always correct.
-  const storageBucket = 'studio-3861763439-b3374.appspot.com';
-  const pdfUrl = `https://storage.googleapis.com/${storageBucket}/${sanitizedLensName}.pdf`;
+    useEffect(() => {
+        if (open && lens) {
+            const fetchPdfUrl = async () => {
+                setIsLoadingPdf(true);
+                setPdfUrl(null);
+                try {
+                    const storage = getStorage(firebaseApp);
+                    // Sanitize the lens name to create a valid filename.
+                    const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
+                    const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
+                    const url = await getDownloadURL(pdfRef);
+                    setPdfUrl(url);
+                } catch (error: any) {
+                    if (error.code !== 'storage/object-not-found') {
+                        console.error("Error fetching PDF URL:", error);
+                    }
+                    setPdfUrl(null);
+                } finally {
+                    setIsLoadingPdf(false);
+                }
+            };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg w-[90vw] overflow-y-auto">
-        <SheetHeader className="text-left">
-          <SheetTitle className="text-2xl">{lens.name}</SheetTitle>
-          <SheetDescription>
-            Detailed specifications for {lens.name}.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="py-6 space-y-4">
-            <DetailItem label="Sensor Size" value={lens.sensorSize} />
-            <Separator />
-            <DetailItem label="Effective Focal Length (EFL)" value={`${lens.efl} mm`} />
-            <DetailItem label="Max Image Circle" value={`${lens.maxImageCircle} mm`} />
-            <DetailItem label="F. No." value={lens.fNo} />
-            <DetailItem label="Diagonal FOV" value={`${lens.fovD}°`} />
-            <DetailItem label="Horizontal FOV" value={`${lens.fovH}°`} />
-            <DetailItem label="Vertical FOV" value={`${lens.fovV}°`} />
-            <Separator />
-            <DetailItem label="Total Track Length (TTL)" value={`${lens.ttl} mm`} />
-            <DetailItem label="TV Distortion" value={`${lens.tvDistortion}%`} />
-            <DetailItem label="Relative Illumination" value={`${lens.relativeIllumination}%`} />
-            <DetailItem label="Chief Ray Angle" value={`${lens.chiefRayAngle}°`} />
-            <Separator />
-            <DetailItem label="Mount Type" value={lens.mountType} />
-            <DetailItem label="Lens Structure" value={lens.lensStructure} />
-            <Separator />
-            <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">PDF Document</p>
-                {pdfUrl ? (
-                  <Button asChild variant="outline" size="sm">
-                    <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                      <FileText className="mr-2 h-4 w-4" />
-                      View
-                    </a>
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Not Available</p>
-                )}
-            </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+            fetchPdfUrl();
+        }
+    }, [lens, open, firebaseApp]);
+
+    if (!lens) return null;
+
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent className="sm:max-w-lg w-[90vw] overflow-y-auto">
+                <SheetHeader className="text-left">
+                    <SheetTitle className="text-2xl">{lens.name}</SheetTitle>
+                    <SheetDescription>
+                        Detailed specifications for {lens.name}.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="py-6 space-y-4">
+                    <DetailItem label="Sensor Size" value={lens.sensorSize} />
+                    <Separator />
+                    <DetailItem label="Effective Focal Length (EFL)" value={`${lens.efl} mm`} />
+                    <DetailItem label="Max Image Circle" value={`${lens.maxImageCircle} mm`} />
+                    <DetailItem label="F. No." value={lens.fNo} />
+                    <DetailItem label="Diagonal FOV" value={`${lens.fovD}°`} />
+                    <DetailItem label="Horizontal FOV" value={`${lens.fovH}°`} />
+                    <DetailItem label="Vertical FOV" value={`${lens.fovV}°`} />
+                    <Separator />
+                    <DetailItem label="Total Track Length (TTL)" value={`${lens.ttl} mm`} />
+                    <DetailItem label="TV Distortion" value={`${lens.tvDistortion}%`} />
+                    <DetailItem label="Relative Illumination" value={`${lens.relativeIllumination}%`} />
+                    <DetailItem label="Chief Ray Angle" value={`${lens.chiefRayAngle}°`} />
+                    <Separator />
+                    <DetailItem label="Mount Type" value={lens.mountType} />
+                    <DetailItem label="Lens Structure" value={lens.lensStructure} />
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                        <p className="text-sm text-muted-foreground">PDF Document</p>
+                        {isLoadingPdf ? (
+                            <div className="flex items-center text-sm text-muted-foreground">
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Loading...
+                            </div>
+                        ) : pdfUrl ? (
+                            <Button asChild variant="outline" size="sm">
+                                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    View
+                                </a>
+                            </Button>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">Not Available</p>
+                        )}
+                    </div>
+                </div>
+            </SheetContent>
+        </Sheet>
+    );
 }
 
 const DetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
