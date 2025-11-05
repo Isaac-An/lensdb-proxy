@@ -28,6 +28,8 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
     useEffect(() => {
         if (!open || !lens || !firestore) {
+            setPdfUrl(null);
+            setIsLoadingPdf(false);
             return;
         }
 
@@ -46,7 +48,10 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
                 setPdfUrl(url);
             } catch (error: any) {
                 // If the file is not found, we just show "Not Available".
-                // We don't need to log this specific error as it's an expected case.
+                // This is an expected case, so no need to log the error.
+                if (error.code !== 'storage/object-not-found') {
+                    // Log other unexpected errors if you have a logging service
+                }
                 setPdfUrl(null);
             } finally {
                 setIsLoadingPdf(false);
