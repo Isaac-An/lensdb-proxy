@@ -27,21 +27,22 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
     const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
     useEffect(() => {
-        if (open && lens) {
+        if (open && lens && firebaseApp) {
             const fetchPdfUrl = async () => {
                 setIsLoadingPdf(true);
-                setPdfUrl(null);
+                setPdfUrl(null); // Reset on new lens
                 try {
                     const storage = getStorage(firebaseApp);
-                    // Sanitize the lens name to create a valid filename.
                     const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
                     const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
                     const url = await getDownloadURL(pdfRef);
                     setPdfUrl(url);
                 } catch (error: any) {
                     if (error.code !== 'storage/object-not-found') {
-                        console.error("Error fetching PDF URL:", error);
+                        // For unexpected errors, you might want to log them
+                        // but we still want to show "Not Available" to the user.
                     }
+                    // In any error case, we set the URL to null.
                     setPdfUrl(null);
                 } finally {
                     setIsLoadingPdf(false);
