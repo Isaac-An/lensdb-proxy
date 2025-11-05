@@ -6,12 +6,10 @@ export const ai = genkit({
   plugins: [
     googleAI({
       // The API key is read from the GEMINI_API_KEY environment variable.
-      // initialze the firebase admin app
-      firebase: {
-        credential: 'application-default',
-      },
     }),
-    firebase(),
+    firebase({
+      credential: 'application-default',
+    }),
   ],
   model: 'googleai/gemini-2.5-flash',
 });
