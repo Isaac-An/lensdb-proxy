@@ -13,7 +13,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
-import { getPdfUrl } from '@/ai/flows/getPdfUrl-flow';
+import { getStorageFileUrl } from '@/app/actions';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -40,25 +40,11 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
             if (fileNameToFetch) {
                 try {
-                    // 1. First, try to get a signed URL from Firebase Storage
-                    const result = await getPdfUrl({ fileName: fileNameToFetch });
-                    
-                    if (result.url) {
-                        setPdfUrl(result.url);
-                    } else {
-                        // 2. If storage fetch fails, check if pdfUrl is a direct link
-                        if (fileNameToFetch.startsWith('http')) {
-                            setPdfUrl(fileNameToFetch);
-                        }
-                    }
+                    const result = await getStorageFileUrl({ fileName: fileNameToFetch });
+                    setPdfUrl(result.url);
                 } catch (error) {
-                    console.error("Error fetching PDF URL:", error);
-                    // As a final fallback, try to use the URL directly if an error occurs
-                    if (fileNameToFetch.startsWith('http')) {
-                        setPdfUrl(fileNameToFetch);
-                    } else {
-                        setPdfUrl(null);
-                    }
+                    console.error("Error fetching PDF URL via server action:", error);
+                    setPdfUrl(null);
                 }
             }
 
