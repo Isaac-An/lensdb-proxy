@@ -32,31 +32,45 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             return;
         }
 
-        const fetchPdfUrl = async () => {
+        const fetchOrSetPdfUrl = async () => {
             setIsLoadingPdf(true);
-            setPdfUrl(null); // Reset on new lens
-            try {
-                // Prioritize the pdfUrl field if it exists, otherwise generate from name.
-                const fileName = lens.pdfUrl
-                  ? lens.pdfUrl.trim()
-                  : `${lens.name.trim().replace(/[\/\s]/g, '-')}.pdf`;
+            setPdfUrl(null); 
+            
+            const providedUrl = lens.pdfUrl?.trim();
 
-                if (fileName) {
-                    const result = await getPdfUrl({ fileName });
+            if (providedUrl) {
+                // If it's a full URL, use it directly.
+                if (providedUrl.startsWith('http://') || providedUrl.startsWith('https://')) {
+                    setPdfUrl(providedUrl);
+                    setIsLoadingPdf(false);
+                    return;
+                }
+
+                // If it's just a filename, fetch the signed URL.
+                try {
+                    const result = await getPdfUrl({ fileName: providedUrl });
                     setPdfUrl(result.url);
-                } else {
+                } catch (error) {
+                    console.error("Error fetching PDF URL for filename:", error);
                     setPdfUrl(null);
                 }
-            } catch (error) {
-                // If the flow throws an error (e.g., file not found), we'll catch it here.
-                console.error("Error fetching PDF URL:", error);
-                setPdfUrl(null);
-            } finally {
-                setIsLoadingPdf(false);
+
+            } else {
+                // Fallback: If no pdfUrl, try to generate filename from product name.
+                 try {
+                    const fileName = `${lens.name.trim().replace(/[\/\s]/g, '-')}.pdf`;
+                    const result = await getPdfUrl({ fileName });
+                    setPdfUrl(result.url);
+                } catch (error) {
+                    console.error("Error fetching PDF URL with generated name:", error);
+                    setPdfUrl(null);
+                }
             }
+
+            setIsLoadingPdf(false);
         };
 
-        fetchPdfUrl();
+        fetchOrSetPdfUrl();
     }, [lens, open]);
 
     if (!lens) return null;
