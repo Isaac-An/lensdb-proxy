@@ -37,15 +37,20 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setPdfUrl(null);
 
             try {
-                // The server action now contains all the logic.
-                // Just pass the name and the pdfUrl field.
-                const result = await getStorageFileUrl({
-                    productName: lens.name,
-                    pdfUrlField: lens.pdfUrl,
-                });
-                setPdfUrl(result.url);
+                // Rule 1: If pdfUrl is a direct, valid HTTPS link, use it immediately.
+                if (lens.pdfUrl && lens.pdfUrl.startsWith('https://')) {
+                    setPdfUrl(lens.pdfUrl);
+                } else {
+                    // Rule 2: Otherwise, fall back to fetching from Storage.
+                    // The server action will handle using pdfUrl as a filename or generating one from the name.
+                    const result = await getStorageFileUrl({
+                        productName: lens.name,
+                        pdfUrlField: lens.pdfUrl,
+                    });
+                    setPdfUrl(result.url);
+                }
             } catch (error) {
-                console.error("Error calling getStorageFileUrl action:", error);
+                console.error("Error fetching PDF URL:", error);
                 setPdfUrl(null);
             } finally {
                 setIsLoadingPdf(false);
