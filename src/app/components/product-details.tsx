@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { useFirebaseApp } from '@/firebase';
+import { useFirestore } from '@/firebase';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -22,36 +22,40 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-    const firebaseApp = useFirebaseApp();
+    const firestore = useFirestore();
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
     useEffect(() => {
-        if (open && lens && firebaseApp) {
-            const fetchPdfUrl = async () => {
-                setIsLoadingPdf(true);
-                setPdfUrl(null); // Reset on new lens
-                try {
-                    const storage = getStorage(firebaseApp);
-                    const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-]/g, '-');
-                    const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
-                    const url = await getDownloadURL(pdfRef);
-                    setPdfUrl(url);
-                } catch (error: any) {
-                    if (error.code !== 'storage/object-not-found') {
-                        // For unexpected errors, you might want to log them
-                        // but we still want to show "Not Available" to the user.
-                    }
-                    // In any error case, we set the URL to null.
-                    setPdfUrl(null);
-                } finally {
-                    setIsLoadingPdf(false);
-                }
-            };
-
-            fetchPdfUrl();
+        if (!open || !lens || !firestore) {
+            return;
         }
-    }, [lens, open, firebaseApp]);
+
+        const fetchPdfUrl = async () => {
+            setIsLoadingPdf(true);
+            setPdfUrl(null); 
+            
+            try {
+                // Get the storage service from the same app instance as firestore
+                const storage = getStorage(firestore.app);
+                
+                // Sanitize the lens name to be safe for a URL path component
+                const sanitizedLensName = lens.name.replace(/[^a-zA-Z0-9-._~]/g, '-');
+                const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
+                
+                const url = await getDownloadURL(pdfRef);
+                setPdfUrl(url);
+            } catch (error: any) {
+                // 'storage/object-not-found' is an expected case if a PDF doesn't exist.
+                // For any other error, we'll also just treat it as 'not available'.
+                setPdfUrl(null);
+            } finally {
+                setIsLoadingPdf(false);
+            }
+        };
+
+        fetchPdfUrl();
+    }, [lens, open, firestore]);
 
     if (!lens) return null;
 
