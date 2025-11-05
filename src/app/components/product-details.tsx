@@ -36,7 +36,12 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setIsLoadingPdf(true);
             setPdfUrl(null);
             
-            const fileNameToFetch = lens.pdfUrl?.trim();
+            // Determine the filename: use pdfUrl if it exists, otherwise generate from name.
+            let fileNameToFetch = lens.pdfUrl?.trim();
+            if (!fileNameToFetch) {
+                const sanitizedLensName = lens.name.trim().replace(/\//g, '-');
+                fileNameToFetch = `${sanitizedLensName}.pdf`;
+            }
 
             if (fileNameToFetch) {
                 try {
@@ -45,10 +50,8 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
                     
                     if (result.url) {
                         setPdfUrl(result.url);
-                    } else if (fileNameToFetch.startsWith('http')) {
-                        // Fallback to direct URL if storage fetch fails and it's a valid URL
-                        console.log(`Falling back to direct URL for: ${fileNameToFetch}`);
-                        setPdfUrl(fileNameToFetch);
+                    } else {
+                        console.log(`File not found in storage: ${fileNameToFetch}`);
                     }
                 } catch (error) {
                     console.error("Error resolving PDF URL:", error);
