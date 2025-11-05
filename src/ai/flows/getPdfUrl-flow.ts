@@ -11,6 +11,19 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
+import { firebaseConfig } from '@/firebase/config';
+
+// Initialize firebase-admin if it hasn't been already.
+// This is safe to run on the server.
+if (!admin.apps.length) {
+  try {
+      admin.initializeApp({
+        storageBucket: firebaseConfig.storageBucket,
+      });
+  } catch (e) {
+    console.error("Firebase admin initialization error in getPdfUrl-flow", e);
+  }
+}
 
 const GetPdfUrlInputSchema = z.object({
   fileName: z.string().describe('The name of the PDF file in Firebase Storage.'),
