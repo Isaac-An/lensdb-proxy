@@ -11,7 +11,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
-import * as fs from 'fs';
 import { firebaseConfig } from '@/firebase/config';
 
 // Safely initialize firebase-admin on the server.
@@ -29,12 +28,12 @@ if (!admin.apps.length) {
 }
 
 
-export const GetPdfUrlInputSchema = z.object({
+const GetPdfUrlInputSchema = z.object({
   fileName: z.string().describe('The name of the PDF file in Firebase Storage.'),
 });
 export type GetPdfUrlInput = z.infer<typeof GetPdfUrlInputSchema>;
 
-export const GetPdfUrlOutputSchema = z.object({
+const GetPdfUrlOutputSchema = z.object({
   url: z.string().nullable().describe('The signed download URL for the PDF, or null if not found.'),
 });
 export type GetPdfUrlOutput = z.infer<typeof GetPdfUrlOutputSchema>;
