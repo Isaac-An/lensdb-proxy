@@ -3,13 +3,13 @@
 
 import * as admin from 'firebase-admin';
 import { firebaseConfig } from '@/firebase/config';
+import serviceAccount from '../../firebase-service-account.json';
 
 // Initialize firebase-admin if it hasn't been already.
 if (!admin.apps.length) {
   try {
-    // When running in a Google Cloud environment, the SDK will automatically
-    // find the necessary service account credentials.
     admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
       storageBucket: firebaseConfig.storageBucket,
     });
   } catch (e) {
@@ -36,18 +36,16 @@ export async function getStorageFileUrl(input: GetStorageFileUrlInput): Promise<
 
   try {
     const bucket = admin.storage().bucket();
-    // Ensure the filename is clean and doesn't contain path traversal characters
-    const safeFileName = fileName.replace(/\.\.\//g, '');
-    const file = bucket.file(safeFileName);
+    const file = bucket.file(fileName);
 
     // Check if the file exists first.
     const [exists] = await file.exists();
     if (!exists) {
-      console.log(`[Server Action] File not found in Firebase Storage: "${safeFileName}"`);
+      console.log(`[Server Action] File not found in Firebase Storage: "${fileName}"`);
       return { url: null };
     }
 
-    console.log(`[Server Action] File found: "${safeFileName}". Generating signed URL.`);
+    console.log(`[Server Action] File found: "${fileName}". Generating signed URL.`);
     // Get a signed URL that expires in 15 minutes.
     const [url] = await file.getSignedUrl({
       action: 'read',
