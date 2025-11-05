@@ -32,45 +32,28 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             return;
         }
 
-        const fetchOrSetPdfUrl = async () => {
+        const fetchPdfUrl = async () => {
             setIsLoadingPdf(true);
             setPdfUrl(null); 
             
-            const providedUrl = lens.pdfUrl?.trim();
+            const fileNameToFetch = lens.pdfUrl?.trim();
 
-            if (providedUrl) {
-                // If it's a full URL, use it directly.
-                if (providedUrl.startsWith('http://') || providedUrl.startsWith('https://')) {
-                    setPdfUrl(providedUrl);
-                    setIsLoadingPdf(false);
-                    return;
-                }
-
-                // If it's just a filename, fetch the signed URL.
+            if (fileNameToFetch) {
                 try {
-                    const result = await getPdfUrl({ fileName: providedUrl });
+                    const result = await getPdfUrl({ fileName: fileNameToFetch });
                     setPdfUrl(result.url);
                 } catch (error) {
                     console.error("Error fetching PDF URL for filename:", error);
                     setPdfUrl(null);
                 }
-
-            } else {
-                // Fallback: If no pdfUrl, try to generate filename from product name.
-                 try {
-                    const fileName = `${lens.name.trim().replace(/[\/\s]/g, '-')}.pdf`;
-                    const result = await getPdfUrl({ fileName });
-                    setPdfUrl(result.url);
-                } catch (error) {
-                    console.error("Error fetching PDF URL with generated name:", error);
-                    setPdfUrl(null);
-                }
             }
+            // If fileNameToFetch is null or empty, the URL will remain null,
+            // and "Not Available" will be shown.
 
             setIsLoadingPdf(false);
         };
 
-        fetchOrSetPdfUrl();
+        fetchPdfUrl();
     }, [lens, open]);
 
     if (!lens) return null;
