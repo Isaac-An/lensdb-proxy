@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { useFirestore } from '@/firebase';
+import { useFirebaseApp } from '@/firebase';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -22,12 +23,12 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-    const firestore = useFirestore();
+    const firebaseApp = useFirebaseApp();
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
     useEffect(() => {
-        if (!open || !lens || !firestore) {
+        if (!open || !lens || !firebaseApp) {
             setPdfUrl(null);
             setIsLoadingPdf(false);
             return;
@@ -35,20 +36,16 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
         const fetchPdfUrl = async () => {
             setIsLoadingPdf(true);
-            setPdfUrl(null); 
+            setPdfUrl(null);
             
             try {
-                const storage = getStorage(firestore.app);
-                
-                // Trim whitespace and replace slashes to create a safe filename.
+                const storage = getStorage(firebaseApp);
                 const sanitizedLensName = lens.name.trim().replace(/\//g, '-');
                 const pdfRef = ref(storage, `${sanitizedLensName}.pdf`);
                 
                 const url = await getDownloadURL(pdfRef);
                 setPdfUrl(url);
             } catch (error: any) {
-                // If the file is not found, we just show "Not Available".
-                // This is an expected case, so no need to log the error.
                 if (error.code !== 'storage/object-not-found') {
                     // Log other unexpected errors if you have a logging service
                 }
@@ -59,7 +56,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
         };
 
         fetchPdfUrl();
-    }, [lens, open, firestore]);
+    }, [lens, open, firebaseApp]);
 
     if (!lens) return null;
 
