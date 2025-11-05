@@ -36,9 +36,17 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setIsLoadingPdf(true);
             setPdfUrl(null); // Reset on new lens
             try {
-                const sanitizedLensName = lens.name.trim().replace(/\//g, '-');
-                const result = await getPdfUrl({ fileName: `${sanitizedLensName}.pdf` });
-                setPdfUrl(result.url);
+                // Prioritize the pdfUrl field if it exists, otherwise generate from name.
+                const fileName = lens.pdfUrl 
+                  ? lens.pdfUrl.endsWith('.pdf') ? lens.pdfUrl : `${lens.pdfUrl}.pdf`
+                  : `${lens.name.trim().replace(/\//g, '-')}.pdf`;
+
+                if (fileName) {
+                    const result = await getPdfUrl({ fileName });
+                    setPdfUrl(result.url);
+                } else {
+                    setPdfUrl(null);
+                }
             } catch (error) {
                 // If the flow throws an error (e.g., file not found), we'll catch it here.
                 setPdfUrl(null);
