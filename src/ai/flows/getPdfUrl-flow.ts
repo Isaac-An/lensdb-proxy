@@ -11,15 +11,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as admin from 'firebase-admin';
-import { firebaseConfig } from '@/firebase/config';
 
 // Initialize firebase-admin if it hasn't been already.
-// This is safe to run on the server.
+// This is safe to run on the server. In this environment, it will
+// automatically find the necessary credentials.
 if (!admin.apps.length) {
   try {
-      admin.initializeApp({
-        storageBucket: firebaseConfig.storageBucket,
-      });
+      admin.initializeApp();
   } catch (e) {
     console.error("Firebase admin initialization error in getPdfUrl-flow", e);
   }
