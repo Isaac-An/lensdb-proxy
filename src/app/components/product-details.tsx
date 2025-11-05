@@ -36,10 +36,9 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
             setIsLoadingPdf(true);
             setPdfUrl(null); // Reset on new lens
             try {
-                // Prioritize the pdfUrl field if it exists, otherwise generate from name.
-                const fileName = lens.pdfUrl 
-                  ? lens.pdfUrl.endsWith('.pdf') ? lens.pdfUrl : `${lens.pdfUrl}.pdf`
-                  : `${lens.name.trim().replace(/\//g, '-')}.pdf`;
+                // Standardize filename generation by replacing spaces and slashes with hyphens.
+                const sanitizedName = lens.name.trim().replace(/[\/\s]/g, '-');
+                const fileName = `${sanitizedName}.pdf`;
 
                 if (fileName) {
                     const result = await getPdfUrl({ fileName });
