@@ -45,16 +45,10 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
             if (fileNameToFetch) {
                 try {
-                    // Always try to fetch from storage first
                     const result = await getStorageFileUrl({ fileName: fileNameToFetch });
-                    
-                    if (result.url) {
-                        setPdfUrl(result.url);
-                    } else {
-                        console.log(`File not found in storage: ${fileNameToFetch}`);
-                    }
+                    setPdfUrl(result.url); // Will be the signed URL or null
                 } catch (error) {
-                    console.error("Error resolving PDF URL:", error);
+                    console.error("Error fetching signed URL:", error);
                     setPdfUrl(null);
                 }
             }
