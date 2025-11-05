@@ -38,32 +38,33 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 
             let fileNameToFetch: string | undefined;
 
-            if (lens.pdfUrl && lens.pdfUrl.trim()) {
+            if (lens.pdfUrl && lens.pdfUrl.trim() && !lens.pdfUrl.startsWith('https://')) {
+                // Use pdfUrl as filename if it exists and is not a full URL
                 fileNameToFetch = lens.pdfUrl.trim();
-            } else {
+            } else if (!lens.pdfUrl || lens.pdfUrl.trim() === '') {
+                // Generate filename from name if pdfUrl is empty
                 fileNameToFetch = `${lens.name.trim()}.pdf`;
             }
 
+            // Attempt to fetch from storage if we determined a filename
             if (fileNameToFetch) {
                 try {
                     const result = await getStorageFileUrl({ fileName: fileNameToFetch });
                     if (result.url) {
                         setPdfUrl(result.url);
-                    } else if (lens.pdfUrl?.startsWith('https://')) {
-                        // Fallback to using pdfUrl directly if it's a full URL
-                        setPdfUrl(lens.pdfUrl);
-                    } else {
-                        setPdfUrl(null);
+                        setIsLoadingPdf(false);
+                        return; // Success, we are done.
                     }
                 } catch (error) {
-                    console.error("Error fetching or falling back to PDF URL:", error);
-                    // Also attempt fallback on error
-                    if (lens.pdfUrl?.startsWith('https://')) {
-                        setPdfUrl(lens.pdfUrl);
-                    } else {
-                        setPdfUrl(null);
-                    }
+                    console.error("Error fetching signed URL from storage:", error);
                 }
+            }
+
+            // Fallback: If fetch failed or wasn't attempted, check if pdfUrl is a direct link
+            if (lens.pdfUrl && lens.pdfUrl.startsWith('https://')) {
+                setPdfUrl(lens.pdfUrl);
+            } else {
+                setPdfUrl(null); // Ensure no URL is set if all attempts fail
             }
 
             setIsLoadingPdf(false);
