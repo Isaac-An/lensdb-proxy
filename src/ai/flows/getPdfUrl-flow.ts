@@ -13,8 +13,8 @@ import { z } from 'genkit';
 import * as admin from 'firebase-admin';
 
 // Initialize firebase-admin if it hasn't been already.
-// This is safe to run on the server. In this environment, it will
-// automatically find the necessary credentials.
+// This is safe to run on the server. In a Google Cloud environment,
+// it will automatically find the necessary credentials.
 if (!admin.apps.length) {
   try {
       admin.initializeApp();
@@ -47,12 +47,14 @@ const getPdfUrlFlow = ai.defineFlow(
   async ({ fileName }) => {
     try {
       const bucket = admin.storage().bucket();
-      const file = bucket.file(fileName);
+      // Ensure the filename is clean and doesn't contain path traversal characters
+      const safeFileName = fileName.replace(/\.\.\//g, '');
+      const file = bucket.file(safeFileName);
 
       // Check if the file exists first.
       const [exists] = await file.exists();
       if (!exists) {
-        console.log(`File not found: ${fileName}`);
+        console.log(`File not found in Firebase Storage: ${safeFileName}`);
         return { url: null };
       }
 
