@@ -24,10 +24,10 @@ interface ExcelImportProps {
   isDisabled: boolean;
 }
 
-const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name'>)[] = [
-    'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
-    'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
-    'chiefRayAngle', 'mountType', 'lensStructure', 'pdfUrl', 'price'
+const allLensKeys: (keyof Lens)[] = [
+    'id', 'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD',
+    'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination',
+    'chiefRayAngle', 'mountType', 'lensStructure', 'price', 'pdfUrl'
 ];
 
 export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProps) {
@@ -80,30 +80,29 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
           price: 'price',
           pdfurl: 'pdfUrl', pdf: 'pdfUrl',
         };
-
-        const lensesFromFile = dataRows.map((row: any[]) => {
-            const lensData: Partial<Lens> = {};
+        
+        const lensesFromFile = dataRows.map((row: any[], rowIndex) => {
+            const lensData: Partial<Lens> = { id: `imported-${Date.now()}-${rowIndex}` };
+            
             normalizedHeaders.forEach((header, colIndex) => {
               const firestoreKey = keyMap[header];
               if (firestoreKey) {
-                // Read every value as a string to preserve original formatting
                 const value = row[colIndex];
-                (lensData as any)[firestoreKey] = (value === null || value === undefined) ? '' : String(value).trim();
+                (lensData as any)[firestoreKey] = (value === null || value === undefined) ? '' : String(value);
               }
             });
-            return lensData;
-        })
-        .filter(lens => lens.name && typeof lens.name === 'string' && lens.name.trim() !== '')
-        .map((lens, index) => {
-            const completeLens: Partial<Lens> = { id: `imported-${Date.now()}-${index}`, ...lens };
-            const allLensKeys: (keyof Lens)[] = ['name', ...LENS_PROPERTIES];
+
+            // Ensure all properties exist, even if empty
             for (const prop of allLensKeys) {
-                if (completeLens[prop] === undefined || completeLens[prop] === null) {
-                    (completeLens as any)[prop] = '';
+                if (!(prop in lensData)) {
+                    (lensData as any)[prop] = '';
                 }
             }
-            return completeLens as Lens;
-        });
+            
+            return lensData as Lens;
+        })
+        .filter(lens => lens.name && lens.name.trim() !== '');
+
 
         if (lensesFromFile.length === 0) {
             toast({
