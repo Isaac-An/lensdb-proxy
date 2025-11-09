@@ -325,7 +325,7 @@ export function DashboardPage() {
           const existingLensesMap = new Map(existingLensesSnapshot.docs.map(doc => [doc.data().name, { id: doc.id, ...doc.data() } as Lens]));
 
           const newLenses: Partial<Lens>[] = [];
-          const duplicatesToUpdate: LensForUpdate[] = [];
+          const updatesMap = new Map<string, LensForUpdate>();
 
           for (const fileLens of fileLenses) {
             const existingLens = existingLensesMap.get(fileLens.name!);
@@ -359,11 +359,18 @@ export function DashboardPage() {
                 }
 
                 if (needsUpdate) {
-                    duplicatesToUpdate.push({
-                        id: existingLens.id,
-                        name: existingLens.name,
-                        newData: updateData,
-                    });
+                    if (updatesMap.has(existingLens.id)) {
+                        // Merge new data with existing update data
+                        const currentUpdate = updatesMap.get(existingLens.id)!;
+                        currentUpdate.newData = { ...currentUpdate.newData, ...updateData };
+                    } else {
+                        // Create new update entry
+                        updatesMap.set(existingLens.id, {
+                            id: existingLens.id,
+                            name: existingLens.name,
+                            newData: updateData,
+                        });
+                    }
                 }
             } else {
               const completeLens: Partial<Lens> = {...fileLens};
@@ -381,7 +388,9 @@ export function DashboardPage() {
             }
           }
 
+          const duplicatesToUpdate = Array.from(updatesMap.values());
           let description = `${newLenses.length} new lens(es) imported.`;
+
           if (duplicatesToUpdate.length > 0) {
             setLensesToUpdate(duplicatesToUpdate);
             setUpdateConfirmOpen(true);
