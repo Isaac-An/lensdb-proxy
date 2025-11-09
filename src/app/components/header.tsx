@@ -1,30 +1,21 @@
 
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileInput, Search } from 'lucide-react';
-import React, { useRef } from 'react';
+import { Search } from 'lucide-react';
+import React from 'react';
 
 type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  isImportDisabled?: boolean;
+  children?: React.ReactNode;
 };
 
 export function AppHeader({
   searchQuery,
   onSearchChange,
-  onImport,
-  isImportDisabled = false,
+  children,
 }: AppHeaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
       <div className="flex items-center gap-2">
@@ -46,20 +37,7 @@ export function AppHeader({
             />
           </div>
         </form>
-        <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleImportClick} disabled={isImportDisabled}>
-                <FileInput />
-                {isImportDisabled ? 'Authenticating...' : 'Import'}
-            </Button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={onImport}
-              className="hidden"
-              accept=".xlsx, .xls, .csv"
-              disabled={isImportDisabled}
-            />
-        </div>
+        {children}
       </div>
     </header>
   );

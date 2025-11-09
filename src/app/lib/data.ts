@@ -1,7 +1,6 @@
 import type { Lens } from './types';
 
+// This is where the master database of lenses will be stored.
+// You can paste the data from your Excel file here.
+// Make sure it's an array of Lens objects.
 export const lenses: Lens[] = [];
-
-// These are now derived in the component from live data
-// export const SENSOR_SIZES = [...new Set(lenses.map(l => l.sensorSize))].sort();
-// export const MOUNT_TYPES = [...new Set(lenses.map(l => l.mountType))].sort();

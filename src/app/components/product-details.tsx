@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { Lens } from '@/app/lib/types';
 import {
   Sheet,
@@ -12,8 +12,7 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { FileText, Loader2 } from 'lucide-react';
-import { getStorageFileUrl } from '@/app/actions';
+import { FileText } from 'lucide-react';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -22,45 +21,10 @@ type ProductDetailsProps = {
 };
 
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
-    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [isLoadingPdf, setIsLoadingPdf] = useState(false);
-
-    useEffect(() => {
-        if (!open || !lens) {
-            setPdfUrl(null);
-            setIsLoadingPdf(false);
-            return;
-        }
-
-        const fetchPdfUrl = async () => {
-            setIsLoadingPdf(true);
-            setPdfUrl(null);
-
-            try {
-                // Rule 1: If pdfUrl is a direct, valid HTTPS link, use it immediately.
-                if (lens.pdfUrl && lens.pdfUrl.startsWith('https://')) {
-                    setPdfUrl(lens.pdfUrl);
-                } else {
-                    // Rule 2: Otherwise, fall back to fetching from Storage.
-                    // The server action will handle using pdfUrl as a filename or generating one from the name.
-                    const result = await getStorageFileUrl({
-                        productName: lens.name,
-                        pdfUrlField: lens.pdfUrl,
-                    });
-                    setPdfUrl(result.url);
-                }
-            } catch (error) {
-                console.error("Error fetching PDF URL:", error);
-                setPdfUrl(null);
-            } finally {
-                setIsLoadingPdf(false);
-            }
-        };
-
-        fetchPdfUrl();
-    }, [lens, open]);
 
     if (!lens) return null;
+
+    const hasPdfUrl = lens.pdfUrl && lens.pdfUrl.startsWith('https://');
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -91,14 +55,9 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
                     <Separator />
                     <div className="flex justify-between items-center">
                         <p className="text-sm text-muted-foreground">PDF Document</p>
-                        {isLoadingPdf ? (
-                            <div className="flex items-center text-sm text-muted-foreground">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Loading...
-                            </div>
-                        ) : pdfUrl ? (
+                        {hasPdfUrl ? (
                             <Button asChild variant="outline" size="sm">
-                                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                                <a href={lens.pdfUrl} target="_blank" rel="noopener noreferrer">
                                     <FileText className="mr-2 h-4 w-4" />
                                     View
                                 </a>
