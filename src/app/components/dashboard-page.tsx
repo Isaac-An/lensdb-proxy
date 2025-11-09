@@ -67,9 +67,16 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
         const val2 = lens2[key] ?? null;
 
         if (typeof val1 === 'number' && typeof val2 === 'number') {
-            if (val1.toFixed(3) !== val2.toFixed(3)) return false;
+            // Round both numbers to 3 decimal places for comparison
+            if (parseFloat(val1.toFixed(3)) !== parseFloat(val2.toFixed(3))) return false;
         } else if (val1 !== val2) {
-            return false;
+            // Handle cases where one is a number and the other is null, or both are non-numeric
+            if ((val1 === null && val2 !== null) || (val1 !== null && val2 === null)) {
+                 // Consider 0 and null as different
+                if (val1 === 0 && val2 === null || val1 === null && val2 === 0) {
+                   // This can be customized. For now, let's treat them as potentially different.
+                } else if (val1 !== val2) return false;
+            } else if (val1 !== val2) return false;
         }
     }
     return true;

@@ -81,8 +81,12 @@ export function ExcelImport({ onAppend }: ExcelImportProps) {
               if (value === undefined || value === null) return;
 
               if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
-                value = parseFloat(value);
-                if (isNaN(value)) value = null;
+                let numValue = parseFloat(value);
+                if (!isNaN(numValue)) {
+                  value = parseFloat(numValue.toFixed(3));
+                } else {
+                  value = null;
+                }
               }
               (lensData as any)[firestoreKey] = value;
             }
