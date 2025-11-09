@@ -3,13 +3,12 @@
 
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileInput, Plus } from 'lucide-react';
+import { FileInput } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import type { Lens } from '@/app/lib/types';
 
 interface ExcelImportProps {
-  onImport: (lenses: Lens[]) => void;
   onAppend: (lenses: Lens[]) => void;
 }
 
@@ -24,11 +23,11 @@ const NUMERIC_PROPERTIES: (keyof Lens)[] = [
     'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
 ];
 
-export function ExcelImport({ onImport, onAppend }: ExcelImportProps) {
+export function ExcelImport({ onAppend }: ExcelImportProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, mode: 'import' | 'append') => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -115,11 +114,7 @@ export function ExcelImport({ onImport, onAppend }: ExcelImportProps) {
             return;
         }
 
-        if (mode === 'import') {
-            onImport(importedLenses);
-        } else {
-            onAppend(importedLenses);
-        }
+        onAppend(importedLenses);
 
       } catch (error: any) {
         toast({
@@ -140,16 +135,12 @@ export function ExcelImport({ onImport, onAppend }: ExcelImportProps) {
     <div className="flex items-center gap-2">
       <Button size="sm" onClick={() => fileInputRef.current?.click()}>
         <FileInput />
-        Import & Replace
-      </Button>
-      <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
-        <Plus />
-        Append Data
+        Import Data
       </Button>
       <input
         type="file"
         ref={fileInputRef}
-        onChange={(e) => handleFileChange(e, e.shiftKey ? 'append' : 'import')} // A bit of a hack: hold shift to append
+        onChange={handleFileChange}
         className="hidden"
         accept=".xlsx, .xls, .csv"
       />

@@ -60,23 +60,14 @@ export function DashboardPage() {
   
   const { toast } = useToast();
 
-  const handleImport = (importedLenses: Lens[]) => {
-    if (lenses.length > 0) {
-      if (!confirm('This will overwrite the current lens data. Are you sure?')) {
-        return;
-      }
-    }
-    setLenses(importedLenses);
-    toast({
-      title: 'Import Successful',
-      description: `Successfully loaded ${importedLenses.length} lenses from the file.`,
-    });
-  };
-
   const handleAppend = (lensesToAppend: Lens[]) => {
     const existingLensNames = new Set(lenses.map(l => l.name));
     const newLenses = lensesToAppend.filter(l => !existingLensNames.has(l.name));
     const duplicateLenses = lensesToAppend.filter(l => existingLensNames.has(l.name));
+
+    if (lenses.length > 0 && newLenses.length > 0 && !confirm('Are you sure you want to add new lenses?')) {
+        return;
+    }
 
     if (newLenses.length > 0) {
       setLenses(prevLenses => [...prevLenses, ...newLenses]);
@@ -88,7 +79,7 @@ export function DashboardPage() {
     }
 
     toast({
-      title: 'Append Complete',
+      title: 'Import Complete',
       description: description.trim(),
     });
   };
@@ -201,7 +192,7 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
         >
-          <ExcelImport onImport={handleImport} onAppend={handleAppend} />
+          <ExcelImport onAppend={handleAppend} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <ProductList lenses={filteredLenses} isLoading={false} onSelectLens={handleSelectLens} />
