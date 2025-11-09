@@ -20,6 +20,11 @@ type ProductDetailsProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+const formatValue = (value: string | number | undefined | null, unit: string = '') => {
+  if (value === null || value === undefined || value === '') return 'N/A';
+  return `${value}${unit}`;
+};
+
 export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
 
     if (!lens) return null;
@@ -38,17 +43,17 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
                 <div className="py-6 space-y-4">
                     <DetailItem label="Sensor Size" value={lens.sensorSize} />
                     <Separator />
-                    <DetailItem label="Effective Focal Length (EFL)" value={`${lens.efl} mm`} />
-                    <DetailItem label="Max Image Circle" value={`${lens.maxImageCircle} mm`} />
-                    <DetailItem label="F. No." value={lens.fNo} />
-                    <DetailItem label="Diagonal FOV" value={`${lens.fovD}°`} />
-                    <DetailItem label="Horizontal FOV" value={`${lens.fovH}°`} />
-                    <DetailItem label="Vertical FOV" value={`${lens.fovV}°`} />
+                    <DetailItem label="Effective Focal Length (EFL)" value={formatValue(lens.efl, ' mm')} />
+                    <DetailItem label="Max Image Circle" value={formatValue(lens.maxImageCircle, ' mm')} />
+                    <DetailItem label="F. No." value={formatValue(lens.fNo)} />
+                    <DetailItem label="Diagonal FOV" value={formatValue(lens.fovD, '°')} />
+                    <DetailItem label="Horizontal FOV" value={formatValue(lens.fovH, '°')} />
+                    <DetailItem label="Vertical FOV" value={formatValue(lens.fovV, '°')} />
                     <Separator />
-                    <DetailItem label="Total Track Length (TTL)" value={`${lens.ttl} mm`} />
-                    <DetailItem label="TV Distortion" value={`${lens.tvDistortion}%`} />
-                    <DetailItem label="Relative Illumination" value={`${lens.relativeIllumination}%`} />
-                    <DetailItem label="Chief Ray Angle" value={`${lens.chiefRayAngle}°`} />
+                    <DetailItem label="Total Track Length (TTL)" value={formatValue(lens.ttl, ' mm')} />
+                    <DetailItem label="TV Distortion" value={formatValue(lens.tvDistortion, '%')} />
+                    <DetailItem label="Relative Illumination" value={formatValue(lens.relativeIllumination, '%')} />
+                    <DetailItem label="Chief Ray Angle" value={formatValue(lens.chiefRayAngle, '°')} />
                     <Separator />
                     <DetailItem label="Mount Type" value={lens.mountType} />
                     <DetailItem label="Lens Structure" value={lens.lensStructure} />

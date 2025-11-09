@@ -63,16 +63,15 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
     ];
 
     for (const key of keysToCompare) {
-        const val1 = lens1[key] ?? null;
-        const val2 = lens2[key] ?? null;
+        const val1 = lens1[key] ?? '';
+        const val2 = lens2[key] ?? '';
+        
+        // Treat null, undefined and empty strings as the same
+        const normVal1 = val1 === null || val1 === undefined ? '' : String(val1);
+        const normVal2 = val2 === null || val2 === undefined ? '' : String(val2);
 
-        if (typeof val1 === 'number' && typeof val2 === 'number') {
-            if (parseFloat(val1.toFixed(3)) !== parseFloat(val2.toFixed(3))) return false;
-        } else if (val1 !== val2) {
-             if ((val1 === null && val2 !== null) || (val1 !== null && val2 === null)) {
-                if (val1 === 0 && val2 === null || val1 === null && val2 === 0) {
-                } else if (val1 !== val2) return false;
-            } else if (val1 !== val2) return false;
+        if (normVal1 !== normVal2) {
+            return false;
         }
     }
     return true;
@@ -290,17 +289,21 @@ export function DashboardPage() {
         return false;
       }
 
-      if (efl[0] !== null && lens.efl < efl[0]) return false;
-      if (efl[1] !== null && lens.efl > efl[1]) return false;
-
-      if (fNo[0] !== null && lens.fNo < fNo[0]) return false;
-      if (fNo[1] !== null && lens.fNo > fNo[1]) return false;
-
-      if (fovD[0] !== null && lens.fovD < fovD[0]) return false;
-      if (fovD[1] !== null && lens.fovD > fovD[1]) return false;
-
-      if (ttl[0] !== null && lens.ttl < ttl[0]) return false;
-      if (ttl[1] !== null && lens.ttl > ttl[1]) return false;
+      const eflVal = parseFloat(String(lens.efl));
+      if (efl[0] !== null && (isNaN(eflVal) || eflVal < efl[0])) return false;
+      if (efl[1] !== null && (isNaN(eflVal) || eflVal > efl[1])) return false;
+  
+      const fNoVal = parseFloat(String(lens.fNo));
+      if (fNo[0] !== null && (isNaN(fNoVal) || fNoVal < fNo[0])) return false;
+      if (fNo[1] !== null && (isNaN(fNoVal) || fNoVal > fNo[1])) return false;
+  
+      const fovDVal = parseFloat(String(lens.fovD));
+      if (fovD[0] !== null && (isNaN(fovDVal) || fovDVal < fovD[0])) return false;
+      if (fovD[1] !== null && (isNaN(fovDVal) || fovDVal > fovD[1])) return false;
+  
+      const ttlVal = parseFloat(String(lens.ttl));
+      if (ttl[0] !== null && (isNaN(ttlVal) || ttlVal < ttl[0])) return false;
+      if (ttl[1] !== null && (isNaN(ttlVal) || ttlVal > ttl[1])) return false;
 
       return true;
     });

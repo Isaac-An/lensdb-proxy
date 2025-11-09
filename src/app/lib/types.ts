@@ -2,18 +2,18 @@ export interface Lens {
   id: string;
   name: string;
   sensorSize: string;
-  efl: number;
-  maxImageCircle: number;
-  fNo: number;
-  fovD: number;
-  fovH: number;
-  fovV: number;
-  ttl: number;
-  tvDistortion: number;
-  relativeIllumination: number;
-  chiefRayAngle: number;
+  efl: string | number;
+  maxImageCircle: string | number;
+  fNo: string | number;
+  fovD: string | number;
+  fovH: string | number;
+  fovV: string | number;
+  ttl: string | number;
+  tvDistortion: string | number;
+  relativeIllumination: string | number;
+  chiefRayAngle: string | number;
   mountType: string;
   lensStructure: string;
-  price: number;
+  price: string | number;
   pdfUrl?: string; // Add optional pdfUrl
 }

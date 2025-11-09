@@ -30,7 +30,7 @@ const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name' | 'price'>)[] = [
     'chiefRayAngle', 'mountType', 'lensStructure', 'pdfUrl'
 ];
 
-const NUMERIC_PROPERTIES: (keyof Lens)[] = [
+const POTENTIALLY_STRING_PROPERTIES: (keyof Lens)[] = [
     'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
     'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
 ];
@@ -94,12 +94,12 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
                 let value = row[index];
                 if (value === undefined || value === null) return;
   
-                if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
-                  let numValue = parseFloat(value);
-                  if (!isNaN(numValue)) {
-                    value = parseFloat(numValue.toFixed(3));
-                  } else {
-                    value = null;
+                if (POTENTIALLY_STRING_PROPERTIES.includes(firestoreKey)) {
+                  value = String(value).trim();
+                  // Try to parse as a number, if it's a clean number, store it as number
+                  const numValue = Number(value);
+                  if (String(numValue) === value) {
+                      value = numValue;
                   }
                 }
                 (lensData as any)[firestoreKey] = value;
@@ -113,11 +113,7 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
             const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
             for (const prop of allLensKeys) {
                 if (completeLens[prop] === undefined || completeLens[prop] === null) {
-                    if (NUMERIC_PROPERTIES.includes(prop)) {
-                        (completeLens as any)[prop] = null;
-                    } else {
-                        (completeLens as any)[prop] = '';
-                    }
+                    (completeLens as any)[prop] = '';
                 }
             }
             return completeLens as Lens;
