@@ -15,5 +15,5 @@ export interface Lens {
   mountType: string;
   lensStructure: string;
   price: string | number;
-  pdfUrl?: string; // Add optional pdfUrl
+  pdfUrl?: string;
 }

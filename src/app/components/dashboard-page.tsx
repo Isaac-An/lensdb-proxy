@@ -63,14 +63,11 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
     ];
 
     for (const key of keysToCompare) {
-        const val1 = lens1[key] ?? '';
-        const val2 = lens2[key] ?? '';
-        
-        // Treat null, undefined and empty strings as the same
-        const normVal1 = val1 === null || val1 === undefined ? '' : String(val1);
-        const normVal2 = val2 === null || val2 === undefined ? '' : String(val2);
+        // Normalize values: treat null, undefined, and empty string as equivalent for comparison
+        const val1 = lens1[key] === null || lens1[key] === undefined ? '' : String(lens1[key]);
+        const val2 = lens2[key] === null || lens2[key] === undefined ? '' : String(lens2[key]);
 
-        if (normVal1 !== normVal2) {
+        if (val1 !== val2) {
             return false;
         }
     }

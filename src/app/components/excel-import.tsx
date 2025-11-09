@@ -88,26 +88,22 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
 
         const lensesFromFile = dataRows.map((row: any[], index: number) => {
             const lensData: Partial<Lens> = {};
-            normalizedHeaders.forEach((header, index) => {
+            normalizedHeaders.forEach((header, colIndex) => {
               const firestoreKey = keyMap[header];
               if (firestoreKey) {
-                let value = row[index];
-                if (value === undefined || value === null) return;
+                let value = row[colIndex];
+                
+                if (value === undefined || value === null) {
+                    (lensData as any)[firestoreKey] = '';
+                    return;
+                };
   
-                if (POTENTIALLY_STRING_PROPERTIES.includes(firestoreKey)) {
-                  value = String(value).trim();
-                  // Try to parse as a number, if it's a clean number, store it as number
-                  const numValue = Number(value);
-                  if (String(numValue) === value) {
-                      value = numValue;
-                  }
-                }
-                (lensData as any)[firestoreKey] = value;
+                (lensData as any)[firestoreKey] = String(value).trim();
               }
             });
             return lensData;
         })
-        .filter(lens => lens.name && typeof lens.name === 'string')
+        .filter(lens => lens.name && typeof lens.name === 'string' && lens.name.trim() !== '')
         .map((lens, index) => {
             const completeLens: Partial<Lens> = { id: `imported-${Date.now()}-${index}`, ...lens };
             const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
