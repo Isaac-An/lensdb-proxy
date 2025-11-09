@@ -147,6 +147,9 @@ export function DashboardPage() {
         const size = l.sensorSize || '';
         const parts = size.split(' ');
         if (parts.length > 1 && parts[0].includes('"')) {
+            if (parts[1] && parts[1].toUpperCase() === 'ST' && parts.length > 2) {
+                return `${parts[1]} ${parts[2]}`;
+            }
             return parts[1];
         }
         return null;
