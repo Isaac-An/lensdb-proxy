@@ -21,7 +21,7 @@ type ProductDetailsProps = {
 };
 
 const formatValue = (value: string | number | undefined | null, unit: string = '') => {
-  if (value === null || value === undefined || value === '') return 'N/A';
+  if (value === null || value === undefined || String(value).trim() === '') return 'N/A';
   return `${value}${unit}`;
 };
 
@@ -80,6 +80,6 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
 const DetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => (
     <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium text-foreground">{value}</p>
+        <p className="text-sm font-medium text-foreground">{formatValue(value as string)}</p>
     </div>
 );

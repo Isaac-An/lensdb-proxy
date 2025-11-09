@@ -65,7 +65,8 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
     for (const key of keysToCompare) {
         const val1 = lens1[key] ?? '';
         const val2 = lens2[key] ?? '';
-
+        
+        // Simple string comparison
         if (String(val1).trim() !== String(val2).trim()) {
             return false;
         }

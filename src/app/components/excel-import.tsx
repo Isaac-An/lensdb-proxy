@@ -86,14 +86,9 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
             normalizedHeaders.forEach((header, colIndex) => {
               const firestoreKey = keyMap[header];
               if (firestoreKey) {
-                let value = row[colIndex];
-                
-                if (value === undefined || value === null) {
-                    (lensData as any)[firestoreKey] = '';
-                    return;
-                };
-  
-                (lensData as any)[firestoreKey] = String(value).trim();
+                // Read every value as a string to preserve original formatting
+                const value = row[colIndex];
+                (lensData as any)[firestoreKey] = (value === null || value === undefined) ? '' : String(value).trim();
               }
             });
             return lensData;
