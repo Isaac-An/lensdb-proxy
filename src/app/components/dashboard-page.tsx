@@ -12,6 +12,7 @@ import { ExcelImport } from './excel-import';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
+import { UpdateConfirmationDialog } from './update-confirmation-dialog';
 
 export type Filters = {
   searchQuery: string;
@@ -54,6 +55,26 @@ const naturalSort = (a: string, b: string) => {
     return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
+const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
+    const keysToCompare: (keyof Lens)[] = [
+        'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV',
+        'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'mountType',
+        'lensStructure', 'pdfUrl', 'price'
+    ];
+
+    for (const key of keysToCompare) {
+        const val1 = lens1[key] ?? null;
+        const val2 = lens2[key] ?? null;
+
+        if (typeof val1 === 'number' && typeof val2 === 'number') {
+            if (val1.toFixed(3) !== val2.toFixed(3)) return false;
+        } else if (val1 !== val2) {
+            return false;
+        }
+    }
+    return true;
+};
+
 export function DashboardPage() {
   const { firestore } = useFirebase();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
@@ -62,64 +83,89 @@ export function DashboardPage() {
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
+  const [lensesToUpdate, setLensesToUpdate] = useState<{current: Lens, updated: Lens}[]>([]);
+  const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   
   const { toast } = useToast();
 
-  const handleAppend = async (lensesToAppend: Lens[]) => {
+  const handleAppend = (lensesToAppend: Lens[]) => {
     if (!firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Database not available. Please try again later.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
       return;
     }
   
-    const existingLensNames = new Set(lenses.map(l => l.name));
-    const newLenses = lensesToAppend.filter(l => !existingLensNames.has(l.name));
-    const duplicateLenses = lensesToAppend.filter(l => existingLensNames.has(l.name));
+    const existingLensesMap = new Map(lenses.map(l => [l.name, l]));
+    const newLenses: Lens[] = [];
+    const changedLenses: {current: Lens, updated: Lens}[] = [];
+    let skippedCount = 0;
   
-    if (lenses.length > 0 && newLenses.length > 0) {
-      if (!confirm('Are you sure you want to add new lenses?')) {
-        return;
+    lensesToAppend.forEach(importedLens => {
+      const existingLens = existingLensesMap.get(importedLens.name);
+      if (!existingLens) {
+        newLenses.push(importedLens);
+      } else {
+        if (!areLensesEqual(existingLens, importedLens)) {
+          changedLenses.push({ current: existingLens, updated: { ...importedLens, id: existingLens.id } });
+        } else {
+          skippedCount++;
+        }
       }
-    }
+    });
   
     if (newLenses.length > 0) {
       const batch = writeBatch(firestore);
-      newLenses.forEach((lens) => {
-        const docRef = doc(collection(firestore, 'products'));
-        batch.set(docRef, { ...lens, id: docRef.id }); // Add Firestore-generated ID
+      newLenses.forEach(lens => {
+        const docRef = doc(productsCollection!);
+        batch.set(docRef, { ...lens, id: docRef.id });
       });
-  
-      try {
-        await batch.commit();
-        let description = `${newLenses.length} new lens(es) imported.`;
-        if (duplicateLenses.length > 0) {
-          description += ` ${duplicateLenses.length} duplicate(s) were skipped: ${duplicateLenses.map(l => l.name).join(', ')}`;
-        }
+      batch.commit().then(() => {
         toast({
-          title: 'Import Complete',
-          description: description.trim(),
+          title: 'Import Successful',
+          description: `${newLenses.length} new lens(es) were added.`,
         });
-      } catch (error: any) {
+      }).catch(error => {
+        toast({ variant: 'destructive', title: 'Import Failed', description: error.message });
+      });
+    }
+
+    if (changedLenses.length > 0) {
+      setLensesToUpdate(changedLenses);
+      setUpdateConfirmOpen(true);
+    } else if (newLenses.length === 0) {
         toast({
-          variant: 'destructive',
-          title: 'Import Failed',
-          description: error.message || 'Could not save new lenses to the database.',
+            title: 'Import Complete',
+            description: `No new or changed lenses found. ${skippedCount > 0 ? `${skippedCount} identical lens(es) were skipped.` : ''}`,
         });
-      }
-    } else {
-       let description = `0 new lenses imported.`;
-       if (duplicateLenses.length > 0) {
-         description += ` ${duplicateLenses.length} duplicate(s) were skipped: ${duplicateLenses.map(l => l.name).join(', ')}`;
-       }
-       toast({
-         title: 'Import Complete',
-         description: description.trim(),
-       });
     }
   };
+
+  const handleConfirmUpdate = async () => {
+    if (!firestore || lensesToUpdate.length === 0) return;
+
+    const batch = writeBatch(firestore);
+    lensesToUpdate.forEach(({ updated }) => {
+      const docRef = doc(firestore, 'products', updated.id);
+      batch.set(docRef, updated);
+    });
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'Update Successful',
+        description: `${lensesToUpdate.length} lens(es) were updated.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: error.message || 'Could not update lenses in the database.',
+      });
+    } finally {
+      setLensesToUpdate([]);
+      setUpdateConfirmOpen(false);
+    }
+  };
+
 
   const { sensorSizes, mountTypes, sensorNames } = useMemo(() => {
     const customSensorSort = (a: string, b: string) => {
@@ -246,6 +292,13 @@ export function DashboardPage() {
           onOpenChange={setDetailsOpen} 
         />
       )}
+
+      <UpdateConfirmationDialog
+        isOpen={isUpdateConfirmOpen}
+        onClose={() => setUpdateConfirmOpen(false)}
+        onConfirm={handleConfirmUpdate}
+        lensesToUpdate={lensesToUpdate}
+      />
     </div>
   );
 }
