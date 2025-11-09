@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ExcelImport } from './excel-import';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore';
 import { UpdateConfirmationDialog } from './update-confirmation-dialog';
 
 export type Filters = {
@@ -67,14 +67,10 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
         const val2 = lens2[key] ?? null;
 
         if (typeof val1 === 'number' && typeof val2 === 'number') {
-            // Round both numbers to 3 decimal places for comparison
             if (parseFloat(val1.toFixed(3)) !== parseFloat(val2.toFixed(3))) return false;
         } else if (val1 !== val2) {
-            // Handle cases where one is a number and the other is null, or both are non-numeric
-            if ((val1 === null && val2 !== null) || (val1 !== null && val2 === null)) {
-                 // Consider 0 and null as different
+             if ((val1 === null && val2 !== null) || (val1 !== null && val2 === null)) {
                 if (val1 === 0 && val2 === null || val1 === null && val2 === 0) {
-                   // This can be customized. For now, let's treat them as potentially different.
                 } else if (val1 !== val2) return false;
             } else if (val1 !== val2) return false;
         }
@@ -85,21 +81,24 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
 export function DashboardPage() {
   const { firestore } = useFirebase();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
-  const { data: lenses = [], isLoading } = useCollection<Lens>(productsCollection);
+  const { data: lenses = [], isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
   
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const [lensesToUpdate, setLensesToUpdate] = useState<{current: Lens, updated: Lens}[]>([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   
   const { toast } = useToast();
 
   const handleAppend = (lensesToAppend: Lens[]) => {
-    if (!firestore) {
+    if (!firestore || !productsCollection) {
       toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
       return;
     }
+    
+    setIsImporting(true);
   
     const existingLensesMap = new Map(lenses.map(l => [l.name, l]));
     const newLenses: Lens[] = [];
@@ -122,17 +121,19 @@ export function DashboardPage() {
     if (newLenses.length > 0) {
       const batch = writeBatch(firestore);
       newLenses.forEach(lens => {
-        const docRef = doc(productsCollection!);
+        const docRef = doc(productsCollection);
         batch.set(docRef, { ...lens, id: docRef.id });
       });
       batch.commit().then(() => {
         toast({
-          title: 'Import Successful',
+          title: 'Append Successful',
           description: `${newLenses.length} new lens(es) were added.`,
         });
       }).catch(error => {
-        toast({ variant: 'destructive', title: 'Import Failed', description: error.message });
-      });
+        toast({ variant: 'destructive', title: 'Append Failed', description: error.message });
+      }).finally(() => setIsImporting(false));
+    } else {
+        setIsImporting(false);
     }
 
     if (changedLenses.length > 0) {
@@ -140,11 +141,54 @@ export function DashboardPage() {
       setUpdateConfirmOpen(true);
     } else if (newLenses.length === 0) {
         toast({
-            title: 'Import Complete',
-            description: `No new or changed lenses found. ${skippedCount > 0 ? `${skippedCount} identical lens(es) were skipped.` : ''}`,
+            title: 'Append Complete',
+            description: `No new lenses found. ${skippedCount > 0 ? `${skippedCount} identical lens(es) were skipped.` : ''}`,
         });
     }
   };
+
+  const handleReplace = async (lensesToImport: Lens[]) => {
+    if (!firestore || !productsCollection) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
+        return;
+    }
+
+    setIsImporting(true);
+    toast({ title: 'Replacing Database', description: 'Please wait, this may take a moment...' });
+
+    try {
+        // 1. Delete all existing documents
+        const existingDocs = await getDocs(productsCollection);
+        const deleteBatch = writeBatch(firestore);
+        existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
+        await deleteBatch.commit();
+        toast({ title: 'Old Data Deleted', description: 'Now importing new data...' });
+
+
+        // 2. Add new documents
+        const addBatch = writeBatch(firestore);
+        lensesToImport.forEach(lens => {
+            const docRef = doc(productsCollection);
+            addBatch.set(docRef, { ...lens, id: docRef.id });
+        });
+        await addBatch.commit();
+
+        toast({
+            title: 'Replace Successful',
+            description: `Successfully imported ${lensesToImport.length} new lens(es).`,
+        });
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Replace Failed',
+            description: error.message || 'An unexpected error occurred.',
+        });
+    } finally {
+        setIsImporting(false);
+    }
+  };
+
 
   const handleConfirmUpdate = async () => {
     if (!firestore || lensesToUpdate.length === 0) return;
@@ -268,6 +312,8 @@ export function DashboardPage() {
     setDetailsOpen(true);
   };
 
+  const isLoading = isLoadingLenses || isImporting;
+
   return (
     <div className="flex h-screen bg-background">
       <div className="w-1/3 border-r">
@@ -285,7 +331,7 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
         >
-          <ExcelImport onAppend={handleAppend} />
+          <ExcelImport onAppend={handleAppend} onReplace={handleReplace} isDisabled={isLoading} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} />

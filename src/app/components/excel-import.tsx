@@ -1,15 +1,27 @@
 
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileInput } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import type { Lens } from '@/app/lib/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ExcelImportProps {
   onAppend: (lenses: Lens[]) => void;
+  onReplace: (lenses: Lens[]) => void;
+  isDisabled: boolean;
 }
 
 const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name' | 'price'>)[] = [
@@ -23,8 +35,10 @@ const NUMERIC_PROPERTIES: (keyof Lens)[] = [
     'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
 ];
 
-export function ExcelImport({ onAppend }: ExcelImportProps) {
+export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importedLenses, setImportedLenses] = useState<Lens[] | null>(null);
+  const [isConfirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,26 +86,26 @@ export function ExcelImport({ onAppend }: ExcelImportProps) {
           pdfurl: 'pdfUrl', pdf: 'pdfUrl',
         };
 
-        const importedLenses = dataRows.map((row: any[], index: number) => {
-          const lensData: Partial<Lens> = {};
-          normalizedHeaders.forEach((header, index) => {
-            const firestoreKey = keyMap[header];
-            if (firestoreKey) {
-              let value = row[index];
-              if (value === undefined || value === null) return;
-
-              if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
-                let numValue = parseFloat(value);
-                if (!isNaN(numValue)) {
-                  value = parseFloat(numValue.toFixed(3));
-                } else {
-                  value = null;
+        const lensesFromFile = dataRows.map((row: any[], index: number) => {
+            const lensData: Partial<Lens> = {};
+            normalizedHeaders.forEach((header, index) => {
+              const firestoreKey = keyMap[header];
+              if (firestoreKey) {
+                let value = row[index];
+                if (value === undefined || value === null) return;
+  
+                if (NUMERIC_PROPERTIES.includes(firestoreKey)) {
+                  let numValue = parseFloat(value);
+                  if (!isNaN(numValue)) {
+                    value = parseFloat(numValue.toFixed(3));
+                  } else {
+                    value = null;
+                  }
                 }
+                (lensData as any)[firestoreKey] = value;
               }
-              (lensData as any)[firestoreKey] = value;
-            }
-          });
-          return lensData;
+            });
+            return lensData;
         })
         .filter(lens => lens.name && typeof lens.name === 'string')
         .map((lens, index) => {
@@ -109,7 +123,7 @@ export function ExcelImport({ onAppend }: ExcelImportProps) {
             return completeLens as Lens;
         });
 
-        if (importedLenses.length === 0) {
+        if (lensesFromFile.length === 0) {
             toast({
               variant: 'destructive',
               title: 'Import Warning',
@@ -118,7 +132,8 @@ export function ExcelImport({ onAppend }: ExcelImportProps) {
             return;
         }
 
-        onAppend(importedLenses);
+        setImportedLenses(lensesFromFile);
+        setConfirmOpen(true);
 
       } catch (error: any) {
         toast({
@@ -135,9 +150,22 @@ export function ExcelImport({ onAppend }: ExcelImportProps) {
     reader.readAsArrayBuffer(file);
   };
 
+  const handleConfirm = (action: 'replace' | 'append') => {
+    if (!importedLenses) return;
+    
+    if (action === 'replace') {
+      onReplace(importedLenses);
+    } else {
+      onAppend(importedLenses);
+    }
+    
+    setConfirmOpen(false);
+    setImportedLenses(null);
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      <Button size="sm" onClick={() => fileInputRef.current?.click()}>
+    <>
+      <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isDisabled}>
         <FileInput />
         Import Data
       </Button>
@@ -148,6 +176,22 @@ export function ExcelImport({ onAppend }: ExcelImportProps) {
         className="hidden"
         accept=".xlsx, .xls, .csv"
       />
-    </div>
+      
+      <AlertDialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>How do you want to import this file?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can either replace the entire database with this new file, or append new lenses and update existing ones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="outline" onClick={() => handleConfirm('append')}>Append Data</Button>
+            <AlertDialogAction onClick={() => handleConfirm('replace')}>Import & Replace</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
