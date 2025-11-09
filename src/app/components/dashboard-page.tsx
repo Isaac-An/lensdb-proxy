@@ -1,15 +1,17 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Lens } from '@/app/lib/types';
 import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
 import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
-import { lenses as initialLenses } from '@/app/lib/data';
 import { ExcelImport } from './excel-import';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 export type Filters = {
   searchQuery: string;
@@ -53,35 +55,70 @@ const naturalSort = (a: string, b: string) => {
 };
 
 export function DashboardPage() {
-  const [lenses, setLenses] = useState<Lens[]>(initialLenses);
+  const { firestore } = useFirebase();
+  const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
+  const { data: lenses = [], isLoading } = useCollection<Lens>(productsCollection);
+  
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   
   const { toast } = useToast();
 
-  const handleAppend = (lensesToAppend: Lens[]) => {
+  const handleAppend = async (lensesToAppend: Lens[]) => {
+    if (!firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Database not available. Please try again later.',
+      });
+      return;
+    }
+  
     const existingLensNames = new Set(lenses.map(l => l.name));
     const newLenses = lensesToAppend.filter(l => !existingLensNames.has(l.name));
     const duplicateLenses = lensesToAppend.filter(l => existingLensNames.has(l.name));
-
-    if (lenses.length > 0 && newLenses.length > 0 && !confirm('Are you sure you want to add new lenses?')) {
+  
+    if (lenses.length > 0 && newLenses.length > 0) {
+      if (!confirm('Are you sure you want to add new lenses?')) {
         return;
+      }
     }
-
+  
     if (newLenses.length > 0) {
-      setLenses(prevLenses => [...prevLenses, ...newLenses]);
+      const batch = writeBatch(firestore);
+      newLenses.forEach((lens) => {
+        const docRef = doc(collection(firestore, 'products'));
+        batch.set(docRef, { ...lens, id: docRef.id }); // Add Firestore-generated ID
+      });
+  
+      try {
+        await batch.commit();
+        let description = `${newLenses.length} new lens(es) imported.`;
+        if (duplicateLenses.length > 0) {
+          description += ` ${duplicateLenses.length} duplicate(s) were skipped: ${duplicateLenses.map(l => l.name).join(', ')}`;
+        }
+        toast({
+          title: 'Import Complete',
+          description: description.trim(),
+        });
+      } catch (error: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Import Failed',
+          description: error.message || 'Could not save new lenses to the database.',
+        });
+      }
+    } else {
+       let description = `0 new lenses imported.`;
+       if (duplicateLenses.length > 0) {
+         description += ` ${duplicateLenses.length} duplicate(s) were skipped: ${duplicateLenses.map(l => l.name).join(', ')}`;
+       }
+       toast({
+         title: 'Import Complete',
+         description: description.trim(),
+       });
     }
-    
-    let description = `${newLenses.length} new lens(es) imported.`;
-    if (duplicateLenses.length > 0) {
-      description += ` ${duplicateLenses.length} duplicate(s) were skipped: ${duplicateLenses.map(l => l.name).join(', ')}`;
-    }
-
-    toast({
-      title: 'Import Complete',
-      description: description.trim(),
-    });
   };
 
   const { sensorSizes, mountTypes, sensorNames } = useMemo(() => {
@@ -100,13 +137,13 @@ export function DashboardPage() {
       return a.localeCompare(b);
     };
     
-    const baseSensorSizes = lenses.map(l => {
+    const baseSensorSizes = (lenses || []).map(l => {
       const size = l.sensorSize || '';
       const spaceIndex = size.indexOf(' ');
       return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
     }).filter(Boolean);
 
-    const sensorNames = [...new Set(lenses.map(l => {
+    const sensorNames = [...new Set((lenses || []).map(l => {
         const size = l.sensorSize || '';
         const parts = size.split(' ');
         if (parts.length > 1 && parts[0].includes('"')) {
@@ -117,14 +154,14 @@ export function DashboardPage() {
 
     const uniqueSensorSizes = [...new Set(baseSensorSizes)];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
-    const mountTypes = [...new Set(lenses.map(l => l.mountType).filter(Boolean))].sort();
+    const mountTypes = [...new Set((lenses || []).map(l => l.mountType).filter(Boolean))].sort();
     return { sensorSizes: sortedSensorSizes, mountTypes, sensorNames };
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
     const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder, sensorName } = filters;
   
-    let processedLenses = [...lenses];
+    let processedLenses = [...(lenses || [])];
   
     if (sortOrder !== 'none') {
       processedLenses.sort((a, b) => {
@@ -195,7 +232,7 @@ export function DashboardPage() {
           <ExcelImport onAppend={handleAppend} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <ProductList lenses={filteredLenses} isLoading={false} onSelectLens={handleSelectLens} />
+            <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} />
         </main>
       </div>
 
