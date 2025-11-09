@@ -24,15 +24,10 @@ interface ExcelImportProps {
   isDisabled: boolean;
 }
 
-const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name' | 'price'>)[] = [
+const LENS_PROPERTIES: (keyof Omit<Lens, 'id' | 'name'>)[] = [
     'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 
     'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination', 
-    'chiefRayAngle', 'mountType', 'lensStructure', 'pdfUrl'
-];
-
-const POTENTIALLY_STRING_PROPERTIES: (keyof Lens)[] = [
-    'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV', 
-    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'price'
+    'chiefRayAngle', 'mountType', 'lensStructure', 'pdfUrl', 'price'
 ];
 
 export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProps) {
@@ -86,7 +81,7 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
           pdfurl: 'pdfUrl', pdf: 'pdfUrl',
         };
 
-        const lensesFromFile = dataRows.map((row: any[], index: number) => {
+        const lensesFromFile = dataRows.map((row: any[]) => {
             const lensData: Partial<Lens> = {};
             normalizedHeaders.forEach((header, colIndex) => {
               const firestoreKey = keyMap[header];
@@ -106,7 +101,7 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
         .filter(lens => lens.name && typeof lens.name === 'string' && lens.name.trim() !== '')
         .map((lens, index) => {
             const completeLens: Partial<Lens> = { id: `imported-${Date.now()}-${index}`, ...lens };
-            const allLensKeys: (keyof Lens)[] = ['name', 'price', ...LENS_PROPERTIES];
+            const allLensKeys: (keyof Lens)[] = ['name', ...LENS_PROPERTIES];
             for (const prop of allLensKeys) {
                 if (completeLens[prop] === undefined || completeLens[prop] === null) {
                     (completeLens as any)[prop] = '';

@@ -64,15 +64,15 @@ export function UpdateConfirmationDialog({
                     {keysToDisplay.map(key => {
                         const currentValue = current[key] ?? 'N/A';
                         const updatedValue = updated[key] ?? 'N/A';
-                        const isDifferent = currentValue?.toString() !== updatedValue?.toString();
+                        const isDifferent = String(currentValue).trim() !== String(updatedValue).trim();
 
                         if (!isDifferent) return null;
 
                         return (
                             <TableRow key={key}>
                                 <TableCell className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}</TableCell>
-                                <TableCell>{currentValue.toString()}</TableCell>
-                                <TableCell className="text-accent-foreground bg-accent/30">{updatedValue.toString()}</TableCell>
+                                <TableCell>{String(currentValue)}</TableCell>
+                                <TableCell className="text-accent-foreground bg-accent/30">{String(updatedValue)}</TableCell>
                             </TableRow>
                         );
                     })}
