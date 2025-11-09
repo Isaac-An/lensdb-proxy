@@ -50,7 +50,7 @@ export function UpdateConfirmationDialog({
         <ScrollArea className="h-[60vh] pr-6">
           <div className="space-y-6">
             {lensesToUpdate.map(({ current, updated }, index) => (
-              <div key={current.id}>
+              <div key={`${current.id}-${index}`}>
                 <h3 className="text-lg font-semibold mb-2">{current.name}</h3>
                 <Table>
                   <TableHeader>
