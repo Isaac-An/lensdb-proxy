@@ -22,6 +22,7 @@ export type Filters = {
   efl: [number | null, number | null];
   fNo: [number | null, number | null];
   fovD: [number | null, number | null];
+  fovH: [number | null, number | null];
   ttl: [number | null, number | null];
   sortOrder: 'asc' | 'desc' | 'none';
 };
@@ -34,6 +35,7 @@ const initialFilters: Filters = {
   efl: [null, null],
   fNo: [null, null],
   fovD: [null, null],
+  fovH: [null, null],
   ttl: [null, null],
   sortOrder: 'none',
 };
@@ -254,7 +256,7 @@ export function DashboardPage() {
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
-    const { searchQuery, sensorSize, mountType, efl, fNo, fovD, ttl, sortOrder, sensorName } = filters;
+    const { searchQuery, sensorSize, mountType, efl, fNo, fovD, fovH, ttl, sortOrder, sensorName } = filters;
   
     let processedLenses = [...(lenses || [])];
   
@@ -297,6 +299,10 @@ export function DashboardPage() {
       if (fovD[0] !== null && (isNaN(fovDVal) || fovDVal < fovD[0])) return false;
       if (fovD[1] !== null && (isNaN(fovDVal) || fovDVal > fovD[1])) return false;
   
+      const fovHVal = parseFloat(String(lens.fovH));
+      if (fovH[0] !== null && (isNaN(fovHVal) || fovHVal < fovH[0])) return false;
+      if (fovH[1] !== null && (isNaN(fovHVal) || fovHVal > fovH[1])) return false;
+
       const ttlVal = parseFloat(String(lens.ttl));
       if (ttl[0] !== null && (isNaN(ttlVal) || ttlVal < ttl[0])) return false;
       if (ttl[1] !== null && (isNaN(ttlVal) || ttlVal > ttl[1])) return false;
@@ -354,3 +360,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+    

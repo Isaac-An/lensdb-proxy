@@ -32,7 +32,7 @@ type FilterSidebarProps = {
 export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, sensorNames }: FilterSidebarProps) {
   
   const handleRangeChange = (
-    field: 'efl' | 'fNo' | 'fovD' | 'ttl',
+    field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
     index: 0 | 1,
     value: string
   ) => {
@@ -136,6 +136,7 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
                 {renderRangeFilter('EFL (mm)', 'efl', filters, handleRangeChange)}
                 {renderRangeFilter('F. No.', 'fNo', filters, handleRangeChange)}
                 {renderRangeFilter('FOV - Diagonal (°)', 'fovD', filters, handleRangeChange)}
+                {renderRangeFilter('FOV - Horizontal (°)', 'fovH', filters, handleRangeChange)}
                 {renderRangeFilter('TTL (mm)', 'ttl', filters, handleRangeChange)}
               </AccordionContent>
             </AccordionItem>
@@ -148,9 +149,9 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
 
 function renderRangeFilter(
   label: string,
-  field: 'efl' | 'fNo' | 'fovD' | 'ttl',
+  field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
   filters: Filters,
-  handler: (field: 'efl' | 'fNo' | 'fovD' | 'ttl', index: 0 | 1, value: string) => void
+  handler: (field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl', index: 0 | 1, value: string) => void
 ) {
   return (
     <div className="space-y-2">
@@ -175,3 +176,5 @@ function renderRangeFilter(
     </div>
   );
 }
+
+    
