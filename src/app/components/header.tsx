@@ -1,9 +1,9 @@
-
 'use client';
 
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import React from 'react';
+import { Button } from '@/components/ui/button';
 
 type AppHeaderProps = {
   searchQuery: string;
@@ -18,10 +18,13 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
         <h1 className="text-lg font-semibold md:text-xl whitespace-nowrap">
           Appleye Lens Database
         </h1>
+        <Button asChild variant="outline" size="sm">
+          <a href="/supplier-lenses">Unified Supplier Lenses</a>
+        </Button>
       </div>
 
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">

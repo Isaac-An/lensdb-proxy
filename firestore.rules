@@ -7,18 +7,6 @@
  * Data Structure:
  * - /products/{productId}: Stores product details. Publicly readable, but only authorized users can create, update, or delete.
  * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Only authenticated users can create new records.
- *
- * Key Security Decisions:
- * - Products are publicly readable to enable easy browsing and discovery.
- * - User listing is implicitly disallowed by the absence of a root-level /users collection.
- * - The rules do NOT validate the specific data types or presence of all fields within the documents, allowing for flexible data shapes during prototyping. Only fields critical for authorization are validated.
- * - No role-based access control is implemented yet; all authenticated users are treated equally for the `excel_imports` collection.
- *
- * Denormalization for Authorization:
- * - The current data model does not require denormalization. If write access to `products` was restricted (e.g., only allow products to be updated by the original uploader), an `ownerId` field should be added to the `Product` entity and the rules updated accordingly.
- *
- * Structural Segregation:
- * - The separation of `products` and `excel_imports` allows for different security postures. Products can be public while import metadata can be restricted.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -39,6 +27,22 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
+    }
+
+    match /lenses/{lensId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    match /supplier_lenses/{supplierLensId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**

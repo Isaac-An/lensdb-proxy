@@ -15,43 +15,43 @@
           "description": "Sensor size supported by the lens."
         },
         "efl": {
-          "type": "number",
+          "type": "string",
           "description": "Effective focal length of the lens."
         },
         "maxImageCircle": {
-          "type": "number",
+          "type": "string",
           "description": "Maximum image circle of the lens."
         },
         "fNo": {
-          "type": "number",
+          "type": "string",
           "description": "F-number (aperture) of the lens."
         },
         "fovDiagonal": {
-          "type": "number",
+          "type": "string",
           "description": "Field of view (diagonal) of the lens."
         },
         "fovHorizontal": {
-          "type": "number",
+          "type": "string",
           "description": "Field of view (horizontal) of the lens."
         },
         "fovVertical": {
-          "type": "number",
+          "type": "string",
           "description": "Field of view (vertical) of the lens."
         },
         "ttl": {
-          "type": "number",
+          "type": "string",
           "description": "Total track length of the lens."
         },
         "tvDistortion": {
-          "type": "number",
+          "type": "string",
           "description": "TV distortion of the lens."
         },
         "relativeIllumination": {
-          "type": "number",
+          "type": "string",
           "description": "Relative illumination of the lens."
         },
         "chiefRayAngle": {
-          "type": "number",
+          "type": "string",
           "description": "Chief ray angle of the lens."
         },
         "mountType": {
@@ -67,27 +67,17 @@
           "description": "Name of the product lens."
         },
         "price": {
-          "type": "number",
+          "type": "string",
           "description": "Price of the product lens."
+        },
+        "pdfUrl": {
+          "type": "string",
+          "description": "URL to the product datasheet PDF."
         }
       },
       "required": [
         "id",
-        "name",
-        "sensorSize",
-        "efl",
-        "maxImageCircle",
-        "fNo",
-        "fovDiagonal",
-        "fovHorizontal",
-        "fovVertical",
-        "ttl",
-        "tvDistortion",
-        "relativeIllumination",
-        "chiefRayAngle",
-        "mountType",
-        "lensStructure",
-        "price"
+        "name"
       ]
     },
     "ExcelImport": {
@@ -119,6 +109,91 @@
         "filename",
         "uploadDate",
         "recordCount"
+      ]
+    },
+    "SupplierLens": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SupplierLens",
+      "type": "object",
+      "description": "Represents a lens product from a unified supplier database.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product."
+        },
+        "sensorSize": {
+          "type": "string",
+          "description": "Sensor size supported by the lens."
+        },
+        "efl": {
+          "type": "string",
+          "description": "Effective focal length of the lens."
+        },
+        "maxImageCircle": {
+          "type": "string",
+          "description": "Maximum image circle of the lens."
+        },
+        "fNo": {
+          "type": "string",
+          "description": "F-number (aperture) of the lens."
+        },
+        "fovDiagonal": {
+          "type": "string",
+          "description": "Field of view (diagonal) of the lens."
+        },
+        "fovHorizontal": {
+          "type": "string",
+          "description": "Field of view (horizontal) of the lens."
+        },
+        "fovVertical": {
+          "type": "string",
+          "description": "Field of view (vertical) of the lens."
+        },
+        "ttl": {
+          "type": "string",
+          "description": "Total track length of the lens."
+        },
+        "tvDistortion": {
+          "type": "string",
+          "description": "TV distortion of the lens."
+        },
+        "relativeIllumination": {
+          "type": "string",
+          "description": "Relative illumination of the lens."
+        },
+        "chiefRayAngle": {
+          "type": "string",
+          "description": "Chief ray angle of the lens."
+        },
+        "mountType": {
+          "type": "string",
+          "description": "Mount type of the lens."
+        },
+        "lensStructure": {
+          "type": "string",
+          "description": "Optical structure of the lens."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product lens."
+        },
+        "price": {
+          "type": "string",
+          "description": "Price of the product lens."
+        },
+        "pdfUrl": {
+          "type": "string",
+          "description": "URL to the product datasheet PDF."
+        },
+        "supplier": {
+          "type": "string",
+          "description": "Name of the supplier."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "supplier"
       ]
     }
   },
@@ -158,6 +233,38 @@
             {
               "name": "excelImportId",
               "description": "Unique identifier for the excel import record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/lenses/{lensId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores lens product details, typically extracted from PDFs.",
+          "params": [
+            {
+              "name": "lensId",
+              "description": "Unique identifier for the lens."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/supplier_lenses/{supplierLensId}",
+        "definition": {
+          "entityName": "SupplierLens",
+          "schema": {
+            "$ref": "#/backend/entities/SupplierLens"
+          },
+          "description": "Stores lens data from various suppliers.",
+          "params": [
+            {
+              "name": "supplierLensId",
+              "description": "Unique identifier for the supplier lens."
             }
           ]
         }
