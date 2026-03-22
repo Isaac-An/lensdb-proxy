@@ -74,42 +74,40 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    let unsubscribe: () => void = () => {};
+    // 1. Set up the state change listener immediately.
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser) => {
+        // This is called whenever the user signs in or out.
+        // If sign-in is successful, firebaseUser will be populated.
+        // If it fails or logs out, firebaseUser will be null.
+        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: userAuthState.userError });
+      },
+      (error) => {
+        // This handles errors in the listener itself.
+        console.error("FirebaseProvider: onAuthStateChanged error:", error);
+        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+      }
+    );
 
-    const setupAuthListener = () => {
-      unsubscribe = onAuthStateChanged(
-        auth,
-        (firebaseUser) => {
-          if (firebaseUser) {
-            // User is signed in.
-            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-          } else {
-            // No user is signed in. Attempt to sign in anonymously.
-            signInAnonymously(auth).catch((error) => {
-              console.error("Anonymous sign-in failed on initial load:", error);
-              // Even if anonymous sign-in fails, we stop loading and record the error.
-              setUserAuthState({ user: null, isUserLoading: false, userError: error });
-            });
-          }
-        },
-        (error) => {
-          console.error("FirebaseProvider: onAuthStateChanged error:", error);
-          setUserAuthState({ user: null, isUserLoading: false, userError: error });
-        }
-      );
-    };
-    
-    // Use in-memory persistence to potentially work around domain authorization issues.
-    setPersistence(auth, inMemoryPersistence)
-      .then(() => {
-        setupAuthListener();
-      })
-      .catch((error) => {
-        console.error("FirebaseProvider: Failed to set in-memory persistence. Falling back to default. Error:", error);
-        // Fallback to default persistence if setting in-memory fails for some reason
-        setupAuthListener();
-      });
-  
+    // 2. Attempt to sign in anonymously if there's no current user.
+    if (!auth.currentUser) {
+      setPersistence(auth, inMemoryPersistence)
+        .then(() => {
+          signInAnonymously(auth).catch((error) => {
+            // This is where the referer error is caught.
+            console.error("Anonymous sign-in failed:", error);
+            // Set the specific error to be displayed in the UI.
+            setUserAuthState(prevState => ({ ...prevState, user: null, isUserLoading: false, userError: error }));
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to set persistence:", error);
+          setUserAuthState(prevState => ({...prevState, user: null, isUserLoading: false, userError: error }));
+        });
+    }
+
+
     return () => unsubscribe();
   }, [auth]);
 
@@ -149,6 +147,15 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
     throw new Error('Firebase core services not available. Check FirebaseProvider props.');
   }
+
+  // If there's an auth error, we can surface it here to be caught by an error boundary.
+  if (context.userError) {
+     // Don't throw for referer error, as it is handled in the UI
+    if (!(context.userError as any)?.code?.includes('auth/requests-from-referer')) {
+        throw context.userError;
+    }
+  }
+
 
   return {
     firebaseApp: context.firebaseApp,
@@ -195,6 +202,10 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
 export const useUser = (): UserHookResult => { // Renamed from useAuthUser
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
+  const context = useContext(FirebaseContext);
+  if (context === undefined) {
+    throw new Error('useUser must be used within a FirebaseProvider.');
+  }
+  const { user, isUserLoading, userError } = context;
   return { user, isUserLoading, userError };
 };
