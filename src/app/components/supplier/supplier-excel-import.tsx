@@ -27,7 +27,7 @@ interface SupplierExcelImportProps {
 const allSupplierLensKeys: (keyof SupplierLens)[] = [
     'id', 'name', 'supplier', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD',
     'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination',
-    'chiefRayAngle', 'mountType', 'lensStructure', 'price', 'pdfUrl'
+    'chiefRayAngle', 'mountType', 'lensStructure', 'price', 'pdfUrl', 'countryOfOrigin'
 ];
 
 export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: SupplierExcelImportProps) {
@@ -80,6 +80,7 @@ export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: Supplie
           lensstructure: 'lensStructure',
           price: 'price',
           pdfurl: 'pdfUrl', pdf: 'pdfUrl',
+          countryoforigin: 'countryOfOrigin',
         };
         
         const lensesFromFile = dataRows.map((row: any[], rowIndex) => {

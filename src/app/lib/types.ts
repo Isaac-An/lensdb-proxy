@@ -17,6 +17,7 @@ export interface Lens {
   lensStructure: string | null;
   price: string | null;
   pdfUrl: string | null;
+  countryOfOrigin?: string | null;
   sourcePath?: string;
   extractionStatus?: 'extracted' | 'failed' | 'needs_review';
   debug_pdfText_sample?: string;

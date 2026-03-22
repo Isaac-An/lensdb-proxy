@@ -17,9 +17,9 @@ import { SupplierUpdateConfirmationDialog } from './supplier-update-confirmation
 export type SupplierFilters = {
   searchQuery: string;
   sensorSize: string;
-  sensorName: string;
   mountType: string;
   supplier: string;
+  nonChina: string;
   efl: [number | null, number | null];
   fNo: [number | null, number | null];
   fovD: [number | null, number | null];
@@ -31,9 +31,9 @@ export type SupplierFilters = {
 const initialFilters: SupplierFilters = {
   searchQuery: '',
   sensorSize: 'all',
-  sensorName: 'all',
   mountType: 'all',
   supplier: 'all',
+  nonChina: 'all',
   efl: [null, null],
   fNo: [null, null],
   fovD: [null, null],
@@ -77,6 +77,7 @@ const areSupplierLensesEqual = (lens1: Partial<SupplierLens>, lens2: Partial<Sup
     'lensStructure',
     'pdfUrl',
     'price',
+    'countryOfOrigin',
   ];
 
   for (const key of keysToCompare) {
@@ -305,7 +306,7 @@ export function SupplierDashboardPage() {
     }
   };
 
-  const { sensorSizes, mountTypes, sensorNames, suppliers } = useMemo(() => {
+  const { sensorSizes, mountTypes, suppliers } = useMemo(() => {
     const customSensorSort = (a: string, b: string) => {
       const regex = /(\d+)\/(\d+(\.\d+)?)/;
       const matchA = a.match(regex);
@@ -331,30 +332,12 @@ export function SupplierDashboardPage() {
       })
       .filter(Boolean);
 
-    const sensorNames = [
-      ...new Set(
-        allLenses
-          .map((l) => {
-            const size = l.sensorSize || '';
-            const parts = size.split(' ');
-            if (parts.length > 1 && parts[0].includes('"')) {
-              if (parts[1] && parts[1].toUpperCase() === 'ST' && parts.length > 2) {
-                return `${parts[1]} ${parts[2]}`;
-              }
-              return parts[1];
-            }
-            return null;
-          })
-          .filter(Boolean) as string[]
-      ),
-    ].sort();
-
     const uniqueSensorSizes = [...new Set(baseSensorSizes)];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
     const mountTypes = [...new Set(allLenses.map((l) => l.mountType).filter(Boolean) as string[])].sort();
     const suppliers = [...new Set(allLenses.map((l) => l.supplier).filter(Boolean) as string[])].sort();
 
-    return { sensorSizes: sortedSensorSizes, mountTypes, sensorNames, suppliers };
+    return { sensorSizes: sortedSensorSizes, mountTypes, suppliers };
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
@@ -368,8 +351,8 @@ export function SupplierDashboardPage() {
       fovH,
       ttl,
       sortOrder,
-      sensorName,
       supplier,
+      nonChina,
     } = filters;
 
     let processedLenses = [...(lenses || [])];
@@ -392,16 +375,19 @@ export function SupplierDashboardPage() {
         return false;
       }
 
-      if (sensorName !== 'all' && !(lens.sensorSize || '').includes(sensorName)) {
-        return false;
-      }
-
       if (mountType !== 'all' && lens.mountType !== mountType) {
         return false;
       }
 
       if (supplier !== 'all' && lens.supplier !== supplier) {
         return false;
+      }
+      
+      if (nonChina === 'yes') {
+        const origin = String(lens.countryOfOrigin || '').toLowerCase().trim();
+        if (origin.includes('china') || origin === 'cn' || origin === 'prc') {
+          return false;
+        }
       }
 
       const eflVal = parseFloat(String(lens.efl));
@@ -462,7 +448,6 @@ export function SupplierDashboardPage() {
           resetFilters={() => setFilters(initialFilters)}
           sensorSizes={sensorSizes}
           mountTypes={mountTypes}
-          sensorNames={sensorNames}
           suppliers={suppliers}
         />
       </div>

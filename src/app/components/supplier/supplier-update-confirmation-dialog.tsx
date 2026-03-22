@@ -27,7 +27,7 @@ interface UpdateConfirmationDialogProps {
 const keysToDisplay: (keyof SupplierLens)[] = [
     'supplier', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV',
     'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'mountType',
-    'lensStructure', 'pdfUrl', 'price'
+    'lensStructure', 'pdfUrl', 'price', 'countryOfOrigin'
 ];
 
 export function SupplierUpdateConfirmationDialog({

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -25,11 +26,10 @@ type FilterSidebarProps = {
   resetFilters: () => void;
   sensorSizes: string[];
   mountTypes: string[];
-  sensorNames: string[];
   suppliers: string[];
 };
 
-export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, sensorNames, suppliers }: FilterSidebarProps) {
+export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, suppliers }: FilterSidebarProps) {
   
   const handleRangeChange = (
     field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
@@ -94,6 +94,21 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                     </SelectContent>
                   </Select>
                 </div>
+                 <div className="space-y-2">
+                    <Label>Non-China</Label>
+                    <Select
+                        value={filters.nonChina}
+                        onValueChange={(value) => setFilters(prev => ({ ...prev, nonChina: value }))}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select origin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Origins</SelectItem>
+                            <SelectItem value="yes">Exclude China</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Sensor Size</Label>
                   <Select
@@ -107,23 +122,6 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                       <SelectItem value="all">All Sizes</SelectItem>
                       {sensorSizes.map(size => (
                         <SelectItem key={size} value={size}>{size}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Sensor Name</Label>
-                  <Select
-                    value={filters.sensorName}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, sensorName: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sensor name" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Names</SelectItem>
-                      {sensorNames.map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
