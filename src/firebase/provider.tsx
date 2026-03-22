@@ -3,7 +3,7 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, signInAnonymously, setPersistence, inMemoryPersistence } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -73,27 +73,42 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
-  
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (firebaseUser) => {
-        if (firebaseUser) {
-          // User is signed in.
-          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-        } else {
-          // No user is signed in. Attempt to sign in anonymously.
-          signInAnonymously(auth).catch((error) => {
-            console.error("Anonymous sign-in failed on initial load:", error);
-            // Even if anonymous sign-in fails, we stop loading and record the error.
-            setUserAuthState({ user: null, isUserLoading: false, userError: error });
-          });
+
+    let unsubscribe: () => void = () => {};
+
+    const setupAuthListener = () => {
+      unsubscribe = onAuthStateChanged(
+        auth,
+        (firebaseUser) => {
+          if (firebaseUser) {
+            // User is signed in.
+            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+          } else {
+            // No user is signed in. Attempt to sign in anonymously.
+            signInAnonymously(auth).catch((error) => {
+              console.error("Anonymous sign-in failed on initial load:", error);
+              // Even if anonymous sign-in fails, we stop loading and record the error.
+              setUserAuthState({ user: null, isUserLoading: false, userError: error });
+            });
+          }
+        },
+        (error) => {
+          console.error("FirebaseProvider: onAuthStateChanged error:", error);
+          setUserAuthState({ user: null, isUserLoading: false, userError: error });
         }
-      },
-      (error) => {
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
-      }
-    );
+      );
+    };
+    
+    // Use in-memory persistence to potentially work around domain authorization issues.
+    setPersistence(auth, inMemoryPersistence)
+      .then(() => {
+        setupAuthListener();
+      })
+      .catch((error) => {
+        console.error("FirebaseProvider: Failed to set in-memory persistence. Falling back to default. Error:", error);
+        // Fallback to default persistence if setting in-memory fails for some reason
+        setupAuthListener();
+      });
   
     return () => unsubscribe();
   }, [auth]);
