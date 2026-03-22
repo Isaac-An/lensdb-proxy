@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -75,27 +74,32 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
+    // 1. Set up the listener to react to any and all auth state changes.
+    // This will fire when signInAnonymously succeeds or if the user signs out.
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+        // On any change, update our state. If user is null, there's no error yet.
+        // If sign-in fails below, the error will be set explicitly in the .catch() block.
         if (user) {
-          // User is signed in.
-          setUserAuthState({ user, isUserLoading: false, userError: null });
-        } else {
-          // User is signed out or has not signed in. Attempt to sign in anonymously.
-          signInAnonymously(auth).catch((error) => {
-            console.error("Anonymous sign-in failed:", error);
-            // This is critical: if anonymous sign-in fails, we record the error.
-            setUserAuthState({ user: null, isUserLoading: false, userError: error });
-          });
+            setUserAuthState({ user, isUserLoading: false, userError: null });
         }
-      },
-      (error) => {
-        // This handles errors in the listener itself.
-        console.error("FirebaseProvider: onAuthStateChanged error:", error);
+    }, (error) => {
+        // This handles errors in the listener itself, which is rare.
+        console.error("FirebaseProvider: onAuthStateChanged listener error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
-      }
-    );
+    });
+
+    // 2. Proactively attempt to sign in anonymously if there isn't already a user.
+    if (!auth.currentUser) {
+        signInAnonymously(auth).catch((error) => {
+            // This is the critical part. If anonymous sign-in fails, we explicitly
+            // capture that error and set it in our state.
+            console.error("Anonymous sign-in failed:", error);
+            setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        });
+    } else {
+      // If there's already a user from a previous session, set it.
+      setUserAuthState({ user: auth.currentUser, isUserLoading: false, userError: null });
+    }
 
     return () => unsubscribe();
   }, [auth]);
