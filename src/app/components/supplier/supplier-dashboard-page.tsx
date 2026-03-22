@@ -92,7 +92,7 @@ const areSupplierLensesEqual = (lens1: Partial<SupplierLens>, lens2: Partial<Sup
 };
 
 export function SupplierDashboardPage() {
-  const { firestore, user, isUserLoading } = useFirebase();
+  const { firestore, isUserLoading, userError } = useFirebase();
   const productsCollection = useMemoFirebase(
     () => (firestore ? collection(firestore, 'supplier_lenses') : null),
     [firestore]
@@ -433,7 +433,25 @@ export function SupplierDashboardPage() {
     setDetailsOpen(true);
   };
 
-  const isLoading = isLoadingLenses || isImporting || isUserLoading || !user;
+  const isLoading = isLoadingLenses || isImporting || isUserLoading;
+  const isButtonDisabled = isLoading || !!userError;
+
+  if (userError) {
+    return (
+        <div className="flex h-screen items-center justify-center bg-background">
+            <div className="w-full max-w-md p-8 text-center">
+                <h2 className="text-2xl font-bold text-destructive">Authentication Error</h2>
+                <p className="mt-2 text-muted-foreground">Could not sign in to Firebase to access data.</p>
+                <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-left text-sm text-destructive">
+                    <p className="font-mono">{userError.message}</p>
+                </div>
+                <p className="mt-4 text-xs text-muted-foreground">
+                    This is often caused by the app's domain not being authorized in your Firebase project's Authentication settings. Please check your Firebase console.
+                </p>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -457,7 +475,7 @@ export function SupplierDashboardPage() {
           <SupplierExcelImport
             onAppend={handleAppend}
             onReplace={handleReplace}
-            isDisabled={isLoading}
+            isDisabled={isButtonDisabled}
           />
         </SupplierHeader>
 
@@ -487,5 +505,3 @@ export function SupplierDashboardPage() {
     </div>
   );
 }
-
-    

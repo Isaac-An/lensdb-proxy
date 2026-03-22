@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged, signInAnonymously, setPersistence, inMemoryPersistence } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -74,14 +75,20 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    // 1. Set up the state change listener immediately.
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
-        // This is called whenever the user signs in or out.
-        // If sign-in is successful, firebaseUser will be populated.
-        // If it fails or logs out, firebaseUser will be null.
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: userAuthState.userError });
+      (user) => {
+        if (user) {
+          // User is signed in.
+          setUserAuthState({ user, isUserLoading: false, userError: null });
+        } else {
+          // User is signed out or has not signed in. Attempt to sign in anonymously.
+          signInAnonymously(auth).catch((error) => {
+            console.error("Anonymous sign-in failed:", error);
+            // This is critical: if anonymous sign-in fails, we record the error.
+            setUserAuthState({ user: null, isUserLoading: false, userError: error });
+          });
+        }
       },
       (error) => {
         // This handles errors in the listener itself.
@@ -89,24 +96,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
-
-    // 2. Attempt to sign in anonymously if there's no current user.
-    if (!auth.currentUser) {
-      setPersistence(auth, inMemoryPersistence)
-        .then(() => {
-          signInAnonymously(auth).catch((error) => {
-            // This is where the referer error is caught.
-            console.error("Anonymous sign-in failed:", error);
-            // Set the specific error to be displayed in the UI.
-            setUserAuthState(prevState => ({ ...prevState, user: null, isUserLoading: false, userError: error }));
-          });
-        })
-        .catch((error) => {
-          console.error("Failed to set persistence:", error);
-          setUserAuthState(prevState => ({...prevState, user: null, isUserLoading: false, userError: error }));
-        });
-    }
-
 
     return () => unsubscribe();
   }, [auth]);
@@ -147,16 +136,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
     throw new Error('Firebase core services not available. Check FirebaseProvider props.');
   }
-
-  // If there's an auth error, we can surface it here to be caught by an error boundary.
-  if (context.userError) {
-     // Don't throw for referer error, as it is handled in the UI
-    if (!(context.userError as any)?.code?.includes('auth/requests-from-referer')) {
-        throw context.userError;
-    }
-  }
-
-
+  
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
