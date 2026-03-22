@@ -76,7 +76,7 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
 };
 
 export function DashboardPage() {
-  const { firestore } = useFirebase();
+  const { firestore, isUserLoading } = useFirebase();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: lenses = [], isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
   
@@ -317,7 +317,7 @@ export function DashboardPage() {
     setDetailsOpen(true);
   };
 
-  const isLoading = isLoadingLenses || isImporting;
+  const isLoading = isLoadingLenses || isImporting || isUserLoading;
 
   return (
     <div className="flex h-screen bg-background">
@@ -360,5 +360,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-    

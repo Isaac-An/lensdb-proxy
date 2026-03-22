@@ -43,179 +43,268 @@ const initialFilters: SupplierFilters = {
 };
 
 const naturalSort = (a: string, b: string) => {
-    const re = /AE-(L?M)(\d+)/i;
-    
-    const aMatch = a.match(re);
-    const bMatch = b.match(re);
+  const re = /AE-(L?M)(\d+)/i;
 
-    if (aMatch && bMatch) {
-        const aNum = parseInt(aMatch[2], 10);
-        const bNum = parseInt(bMatch[2], 10);
-        if (aNum !== bNum) {
-            return aNum - bNum;
-        }
+  const aMatch = a.match(re);
+  const bMatch = b.match(re);
+
+  if (aMatch && bMatch) {
+    const aNum = parseInt(aMatch[2], 10);
+    const bNum = parseInt(bMatch[2], 10);
+    if (aNum !== bNum) {
+      return aNum - bNum;
     }
-    
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
 const areSupplierLensesEqual = (lens1: Partial<SupplierLens>, lens2: Partial<SupplierLens>) => {
-    const keysToCompare: (keyof SupplierLens)[] = [
-        'supplier', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV',
-        'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'mountType',
-        'lensStructure', 'pdfUrl', 'price'
-    ];
+  const keysToCompare: (keyof SupplierLens)[] = [
+    'supplier',
+    'sensorSize',
+    'efl',
+    'maxImageCircle',
+    'fNo',
+    'fovD',
+    'fovH',
+    'fovV',
+    'ttl',
+    'tvDistortion',
+    'relativeIllumination',
+    'chiefRayAngle',
+    'mountType',
+    'lensStructure',
+    'pdfUrl',
+    'price',
+  ];
 
-    for (const key of keysToCompare) {
-        const val1 = String(lens1[key] ?? '').trim();
-        const val2 = String(lens2[key] ?? '').trim();
-        
-        if (val1 !== val2) {
-            return false;
-        }
+  for (const key of keysToCompare) {
+    const val1 = String(lens1[key] ?? '').trim();
+    const val2 = String(lens2[key] ?? '').trim();
+
+    if (val1 !== val2) {
+      return false;
     }
-    return true;
+  }
+
+  return true;
 };
 
 export function SupplierDashboardPage() {
-  const { firestore } = useFirebase();
-  const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'supplier_lenses') : null, [firestore]);
-  const { data: lenses = [], isLoading: isLoadingLenses } = useCollection<SupplierLens>(productsCollection);
-  
+  const { firestore, isUserLoading } = useFirebase();
+  const productsCollection = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'supplier_lenses') : null),
+    [firestore]
+  );
+  const { data: lenses = [], isLoading: isLoadingLenses } =
+    useCollection<SupplierLens>(productsCollection);
+
   const [filters, setFilters] = useState<SupplierFilters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<SupplierLens | null>(null);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
-  const [lensesToUpdate, setLensesToUpdate] = useState<{current: SupplierLens, updated: SupplierLens}[]>([]);
+  const [lensesToUpdate, setLensesToUpdate] = useState<
+    { current: SupplierLens; updated: SupplierLens }[]
+  >([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
   const { toast } = useToast();
 
-  const handleAppend = (lensesToAppend: SupplierLens[]) => {
+  const BATCH_SIZE = 450;
+
+  const handleAppend = async (lensesToAppend: SupplierLens[]) => {
     if (!firestore || !productsCollection) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Database not available.',
+      });
       return;
     }
-    
+
     setIsImporting(true);
-  
-    // Using name and supplier as a composite key for uniqueness
-    const existingLensesMap = new Map(lenses.map(l => [`${l.name}-${l.supplier}`, l]));
-    const newLenses: SupplierLens[] = [];
-    const changedLenses: {current: SupplierLens, updated: SupplierLens}[] = [];
-    let skippedCount = 0;
-  
-    lensesToAppend.forEach(importedLens => {
-      const existingLens = existingLensesMap.get(`${importedLens.name}-${importedLens.supplier}`);
-      if (!existingLens) {
-        newLenses.push(importedLens);
-      } else {
+    toast({
+      title: 'Importing Supplier Database',
+      description: 'Checking existing data and importing new lenses...',
+    });
+
+    try {
+      const existingDocs = await getDocs(productsCollection);
+      const existingLenses = existingDocs.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...(docSnap.data() as SupplierLens),
+      }));
+
+      const newLenses: SupplierLens[] = [];
+      const updates: { current: SupplierLens; updated: SupplierLens }[] = [];
+
+      for (const importedLens of lensesToAppend) {
+        const importedName = String(importedLens.name ?? '').trim().toLowerCase();
+        const importedSupplier = String(importedLens.supplier ?? '').trim().toLowerCase();
+
+        const existingLens = existingLenses.find(
+          (lens) =>
+            String(lens.name ?? '').trim().toLowerCase() === importedName &&
+            String(lens.supplier ?? '').trim().toLowerCase() === importedSupplier
+        );
+
+        if (!existingLens) {
+          newLenses.push(importedLens);
+          continue;
+        }
+
         if (!areSupplierLensesEqual(existingLens, importedLens)) {
-          changedLenses.push({ current: existingLens, updated: { ...importedLens, id: existingLens.id } });
-        } else {
-          skippedCount++;
+          updates.push({
+            current: existingLens,
+            updated: {
+              ...existingLens,
+              ...importedLens,
+              id: existingLens.id,
+            },
+          });
         }
       }
-    });
-  
-    if (newLenses.length > 0) {
-      const batch = writeBatch(firestore);
-      newLenses.forEach(lens => {
-        const docRef = doc(productsCollection);
-        batch.set(docRef, { ...lens, id: docRef.id });
-      });
-      batch.commit().then(() => {
-        toast({
-          title: 'Append Successful',
-          description: `${newLenses.length} new supplier lens(es) were added.`,
-        });
-      }).catch(error => {
-        toast({ variant: 'destructive', title: 'Append Failed', description: error.message });
-      }).finally(() => setIsImporting(false));
-    } else {
-        setIsImporting(false);
-    }
 
-    if (changedLenses.length > 0) {
-      setLensesToUpdate(changedLenses);
-      setUpdateConfirmOpen(true);
-    } else if (newLenses.length === 0) {
-        toast({
-            title: 'Append Complete',
-            description: `No new lenses found. ${skippedCount > 0 ? `${skippedCount} identical lens(es) were skipped.` : ''}`,
+      for (let i = 0; i < newLenses.length; i += BATCH_SIZE) {
+        const batch = writeBatch(firestore);
+        const chunk = newLenses.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((lens) => {
+          const docRef = doc(productsCollection);
+          batch.set(docRef, { ...lens, id: docRef.id });
         });
+
+        await batch.commit();
+      }
+
+      if (updates.length > 0) {
+        setLensesToUpdate(updates);
+        setUpdateConfirmOpen(true);
+      }
+
+      if (newLenses.length > 0 || updates.length > 0) {
+        toast({
+          title: 'Import Complete',
+          description: `${newLenses.length} new lens(es) added. ${updates.length} existing lens(es) need confirmation to update.`,
+        });
+      } else {
+        toast({
+          title: 'No Changes Found',
+          description: 'All imported lenses already match the current database.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Append failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Import Failed',
+        description: error?.message || 'An unexpected error occurred.',
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
   const handleReplace = async (lensesToImport: SupplierLens[]) => {
     if (!firestore || !productsCollection) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Database not available.' });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Database not available.',
+      });
+      return;
     }
 
     setIsImporting(true);
-    toast({ title: 'Replacing Supplier Database', description: 'Please wait, this may take a moment...' });
+    toast({
+      title: 'Replacing Supplier Database',
+      description: 'Please wait, this may take a moment...',
+    });
 
     try {
-        // 1. Delete all existing documents
-        const existingDocs = await getDocs(productsCollection);
-        const deleteBatch = writeBatch(firestore);
-        existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
-        await deleteBatch.commit();
-        toast({ title: 'Old Data Deleted', description: 'Now importing new supplier data...' });
+      const existingDocs = await getDocs(productsCollection);
 
+      for (let i = 0; i < existingDocs.docs.length; i += BATCH_SIZE) {
+        const batch = writeBatch(firestore);
+        const chunk = existingDocs.docs.slice(i, i + BATCH_SIZE);
 
-        // 2. Add new documents
-        const addBatch = writeBatch(firestore);
-        lensesToImport.forEach(lens => {
-            const docRef = doc(productsCollection);
-            addBatch.set(docRef, { ...lens, id: docRef.id });
-        });
-        await addBatch.commit();
-
-        toast({
-            title: 'Replace Successful',
-            description: `Successfully imported ${lensesToImport.length} new supplier lens(es).`,
+        chunk.forEach((docSnap) => {
+          batch.delete(docSnap.ref);
         });
 
+        await batch.commit();
+      }
+
+      toast({
+        title: 'Old Data Deleted',
+        description: 'Now importing new supplier data...',
+      });
+
+      for (let i = 0; i < lensesToImport.length; i += BATCH_SIZE) {
+        const batch = writeBatch(firestore);
+        const chunk = lensesToImport.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach((lens) => {
+          const docRef = doc(productsCollection);
+          batch.set(docRef, { ...lens, id: docRef.id });
+        });
+
+        await batch.commit();
+      }
+
+      toast({
+        title: 'Replace Successful',
+        description: `Successfully imported ${lensesToImport.length} new supplier lens(es).`,
+      });
     } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Replace Failed',
-            description: error.message || 'An unexpected error occurred.',
-        });
+      console.error('Replace failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Replace Failed',
+        description: error?.message || 'An unexpected error occurred.',
+      });
     } finally {
-        setIsImporting(false);
+      setIsImporting(false);
     }
   };
 
   const handleConfirmUpdate = async () => {
     if (!firestore || lensesToUpdate.length === 0) return;
 
-    const batch = writeBatch(firestore);
-    lensesToUpdate.forEach(({ updated }) => {
-      const docRef = doc(firestore, 'supplier_lenses', updated.id);
-      batch.set(docRef, updated);
-    });
+    setIsImporting(true);
 
     try {
-      await batch.commit();
+      for (let i = 0; i < lensesToUpdate.length; i += BATCH_SIZE) {
+        const batch = writeBatch(firestore);
+        const chunk = lensesToUpdate.slice(i, i + BATCH_SIZE);
+
+        chunk.forEach(({ updated }) => {
+          const docRef = doc(firestore, 'supplier_lenses', updated.id);
+          batch.set(docRef, updated);
+        });
+
+        await batch.commit();
+      }
+
       toast({
         title: 'Update Successful',
         description: `${lensesToUpdate.length} supplier lens(es) were updated.`,
       });
     } catch (error: any) {
+      console.error('Update failed:', error);
       toast({
         variant: 'destructive',
         title: 'Update Failed',
-        description: error.message || 'Could not update supplier lenses in the database.',
+        description: error?.message || 'Could not update supplier lenses in the database.',
       });
     } finally {
       setLensesToUpdate([]);
       setUpdateConfirmOpen(false);
+      setIsImporting(false);
     }
   };
-  
+
   const { sensorSizes, mountTypes, sensorNames, suppliers } = useMemo(() => {
     const customSensorSort = (a: string, b: string) => {
       const regex = /(\d+)\/(\d+(\.\d+)?)/;
@@ -226,59 +315,79 @@ export function SupplierDashboardPage() {
         const valA = parseInt(matchA[1]) / parseFloat(matchA[2]);
         const valB = parseInt(matchB[1]) / parseFloat(matchB[2]);
         if (valA !== valB) {
-          return valB - valA; 
+          return valB - valA;
         }
       }
       return a.localeCompare(b);
     };
-    
+
     const allLenses = lenses || [];
 
-    const baseSensorSizes = allLenses.map(l => {
-      const size = l.sensorSize || '';
-      const spaceIndex = size.indexOf(' ');
-      return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
-    }).filter(Boolean);
-
-    const sensorNames = [...new Set(allLenses.map(l => {
+    const baseSensorSizes = allLenses
+      .map((l) => {
         const size = l.sensorSize || '';
-        const parts = size.split(' ');
-        if (parts.length > 1 && parts[0].includes('"')) {
-            if (parts[1] && parts[1].toUpperCase() === 'ST' && parts.length > 2) {
+        const spaceIndex = size.indexOf(' ');
+        return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
+      })
+      .filter(Boolean);
+
+    const sensorNames = [
+      ...new Set(
+        allLenses
+          .map((l) => {
+            const size = l.sensorSize || '';
+            const parts = size.split(' ');
+            if (parts.length > 1 && parts[0].includes('"')) {
+              if (parts[1] && parts[1].toUpperCase() === 'ST' && parts.length > 2) {
                 return `${parts[1]} ${parts[2]}`;
+              }
+              return parts[1];
             }
-            return parts[1];
-        }
-        return null;
-    }).filter(Boolean) as string[])].sort();
+            return null;
+          })
+          .filter(Boolean) as string[]
+      ),
+    ].sort();
 
     const uniqueSensorSizes = [...new Set(baseSensorSizes)];
     const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
-    const mountTypes = [...new Set(allLenses.map(l => l.mountType).filter(Boolean) as string[])].sort();
-    const suppliers = [...new Set(allLenses.map(l => l.supplier).filter(Boolean) as string[])].sort();
+    const mountTypes = [...new Set(allLenses.map((l) => l.mountType).filter(Boolean) as string[])].sort();
+    const suppliers = [...new Set(allLenses.map((l) => l.supplier).filter(Boolean) as string[])].sort();
+
     return { sensorSizes: sortedSensorSizes, mountTypes, sensorNames, suppliers };
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
-    const { searchQuery, sensorSize, mountType, efl, fNo, fovD, fovH, ttl, sortOrder, sensorName, supplier } = filters;
-  
+    const {
+      searchQuery,
+      sensorSize,
+      mountType,
+      efl,
+      fNo,
+      fovD,
+      fovH,
+      ttl,
+      sortOrder,
+      sensorName,
+      supplier,
+    } = filters;
+
     let processedLenses = [...(lenses || [])];
-  
+
     if (sortOrder !== 'none') {
       processedLenses.sort((a, b) => {
         if (sortOrder === 'asc') {
           return naturalSort(a.name, b.name);
-        } else {
-          return naturalSort(b.name, a.name);
         }
+        return naturalSort(b.name, a.name);
       });
     }
 
-    return processedLenses.filter(lens => {
+    return processedLenses.filter((lens) => {
       if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      
+
       if (sensorSize !== 'all' && !(lens.sensorSize || '').startsWith(sensorSize)) {
         return false;
       }
@@ -290,7 +399,7 @@ export function SupplierDashboardPage() {
       if (mountType !== 'all' && lens.mountType !== mountType) {
         return false;
       }
-      
+
       if (supplier !== 'all' && lens.supplier !== supplier) {
         return false;
       }
@@ -298,15 +407,15 @@ export function SupplierDashboardPage() {
       const eflVal = parseFloat(String(lens.efl));
       if (efl[0] !== null && (isNaN(eflVal) || eflVal < efl[0])) return false;
       if (efl[1] !== null && (isNaN(eflVal) || eflVal > efl[1])) return false;
-  
+
       const fNoVal = parseFloat(String(lens.fNo));
       if (fNo[0] !== null && (isNaN(fNoVal) || fNoVal < fNo[0])) return false;
       if (fNo[1] !== null && (isNaN(fNoVal) || fNoVal > fNo[1])) return false;
-  
+
       const fovDVal = parseFloat(String(lens.fovD));
       if (fovD[0] !== null && (isNaN(fovDVal) || fovDVal < fovD[0])) return false;
       if (fovD[1] !== null && (isNaN(fovDVal) || fovDVal > fovD[1])) return false;
-  
+
       const fovHVal = parseFloat(String(lens.fovH));
       if (fovH[0] !== null && (isNaN(fovHVal) || fovHVal < fovH[0])) return false;
       if (fovH[1] !== null && (isNaN(fovHVal) || fovHVal > fovH[1])) return false;
@@ -317,7 +426,6 @@ export function SupplierDashboardPage() {
 
       return true;
     });
-
   }, [filters, lenses]);
 
   const handleSelectLens = (lens: SupplierLens) => {
@@ -325,38 +433,48 @@ export function SupplierDashboardPage() {
     setDetailsOpen(true);
   };
 
-  const isLoading = isLoadingLenses || isImporting;
+  const isLoading = isLoadingLenses || isImporting || isUserLoading;
 
   return (
     <div className="flex h-screen bg-background">
       <div className="w-1/3 border-r">
-          <SupplierFilterSidebar 
-            filters={filters} 
-            setFilters={setFilters} 
-            resetFilters={() => setFilters(initialFilters)}
-            sensorSizes={sensorSizes}
-            mountTypes={mountTypes}
-            sensorNames={sensorNames}
-            suppliers={suppliers}
-          />
+        <SupplierFilterSidebar
+          filters={filters}
+          setFilters={setFilters}
+          resetFilters={() => setFilters(initialFilters)}
+          sensorSizes={sensorSizes}
+          mountTypes={mountTypes}
+          sensorNames={sensorNames}
+          suppliers={suppliers}
+        />
       </div>
+
       <div className="w-2/3 flex flex-col">
         <SupplierHeader
           searchQuery={filters.searchQuery}
-          onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
+          onSearchChange={(query) => setFilters((prev) => ({ ...prev, searchQuery: query }))}
         >
-          <SupplierExcelImport onAppend={handleAppend} onReplace={handleReplace} isDisabled={isLoading} />
+          <SupplierExcelImport
+            onAppend={handleAppend}
+            onReplace={handleReplace}
+            isDisabled={isLoading}
+          />
         </SupplierHeader>
+
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <SupplierProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} />
+          <SupplierProductList
+            lenses={filteredLenses}
+            isLoading={isLoading}
+            onSelectLens={handleSelectLens}
+          />
         </main>
       </div>
 
       {selectedLens && (
-        <SupplierProductDetails 
-          lens={selectedLens} 
-          open={isDetailsOpen} 
-          onOpenChange={setDetailsOpen} 
+        <SupplierProductDetails
+          lens={selectedLens}
+          open={isDetailsOpen}
+          onOpenChange={setDetailsOpen}
         />
       )}
 
