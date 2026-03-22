@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -400,7 +399,7 @@ export function SupplierDashboardPage() {
   const isLoading = isLoadingLenses || isImporting || isUserLoading;
   const isButtonDisabled = isLoading || !!userError;
 
-  if (userError) {
+  if (userError && process.env.NODE_ENV !== 'development') {
     return (
         <div className="flex h-screen items-center justify-center bg-background">
             <div className="w-full max-w-md p-8 text-center">
