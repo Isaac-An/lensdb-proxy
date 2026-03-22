@@ -19,7 +19,7 @@ export type SupplierFilters = {
   sensorSize: string;
   mountType: string;
   supplier: string;
-  nonChina: string;
+  origin: string;
   efl: [number | null, number | null];
   fNo: [number | null, number | null];
   fovD: [number | null, number | null];
@@ -33,7 +33,7 @@ const initialFilters: SupplierFilters = {
   sensorSize: 'all',
   mountType: 'all',
   supplier: 'all',
-  nonChina: 'all',
+  origin: 'all',
   efl: [null, null],
   fNo: [null, null],
   fovD: [null, null],
@@ -307,37 +307,11 @@ export function SupplierDashboardPage() {
   };
 
   const { sensorSizes, mountTypes, suppliers } = useMemo(() => {
-    const customSensorSort = (a: string, b: string) => {
-      const regex = /(\d+)\/(\d+(\.\d+)?)/;
-      const matchA = a.match(regex);
-      const matchB = b.match(regex);
-
-      if (matchA && matchB) {
-        const valA = parseInt(matchA[1]) / parseFloat(matchA[2]);
-        const valB = parseInt(matchB[1]) / parseFloat(matchB[2]);
-        if (valA !== valB) {
-          return valB - valA;
-        }
-      }
-      return a.localeCompare(b);
-    };
-
     const allLenses = lenses || [];
-
-    const baseSensorSizes = allLenses
-      .map((l) => {
-        const size = l.sensorSize || '';
-        const spaceIndex = size.indexOf(' ');
-        return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
-      })
-      .filter(Boolean);
-
-    const uniqueSensorSizes = [...new Set(baseSensorSizes)];
-    const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
+    const sensorSizes = [...new Set(allLenses.map((l) => l.sensorSize).filter(Boolean) as string[])].sort();
     const mountTypes = [...new Set(allLenses.map((l) => l.mountType).filter(Boolean) as string[])].sort();
     const suppliers = [...new Set(allLenses.map((l) => l.supplier).filter(Boolean) as string[])].sort();
-
-    return { sensorSizes: sortedSensorSizes, mountTypes, suppliers };
+    return { sensorSizes, mountTypes, suppliers };
   }, [lenses]);
 
   const filteredLenses = useMemo(() => {
@@ -352,7 +326,7 @@ export function SupplierDashboardPage() {
       ttl,
       sortOrder,
       supplier,
-      nonChina,
+      origin,
     } = filters;
 
     let processedLenses = [...(lenses || [])];
@@ -371,7 +345,7 @@ export function SupplierDashboardPage() {
         return false;
       }
 
-      if (sensorSize !== 'all' && !(lens.sensorSize || '').startsWith(sensorSize)) {
+      if (sensorSize !== 'all' && lens.sensorSize !== sensorSize) {
         return false;
       }
 
@@ -383,9 +357,13 @@ export function SupplierDashboardPage() {
         return false;
       }
       
-      if (nonChina === 'yes') {
-        const origin = String(lens.countryOfOrigin || '').toLowerCase().trim();
-        if (origin.includes('china') || origin === 'cn' || origin === 'prc') {
+      if (origin === 'non-china') {
+        const value = String(lens.countryOfOrigin || '').trim().toLowerCase();
+        if (
+          value.includes('china') ||
+          value.includes('prc') ||
+          value === 'cn'
+        ) {
           return false;
         }
       }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -58,6 +59,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                     <Separator />
                     <DetailItem label="Mount Type" value={lens.mountType} />
                     <DetailItem label="Lens Structure" value={lens.lensStructure} />
+                    <DetailItem label="Country of Origin" value={formatValue(lens.countryOfOrigin)} />
                     <Separator />
                     <div className="flex justify-between items-center">
                         <p className="text-sm text-muted-foreground">PDF Document</p>

@@ -95,17 +95,17 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                   </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label>Non-China</Label>
+                    <Label>Origin</Label>
                     <Select
-                        value={filters.nonChina}
-                        onValueChange={(value) => setFilters(prev => ({ ...prev, nonChina: value }))}
+                        value={filters.origin}
+                        onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value }))}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Select origin" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Origins</SelectItem>
-                            <SelectItem value="yes">Exclude China</SelectItem>
+                            <SelectItem value="non-china">Non-China</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
