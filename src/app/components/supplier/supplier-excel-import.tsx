@@ -81,6 +81,7 @@ export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: Supplie
           price: 'price',
           pdfurl: 'pdfUrl', pdf: 'pdfUrl',
           countryoforigin: 'countryOfOrigin',
+          origin: 'countryOfOrigin',
         };
         
         const lensesFromFile = dataRows.map((row: any[], rowIndex) => {
