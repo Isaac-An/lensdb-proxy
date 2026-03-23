@@ -122,71 +122,67 @@ export function SupplierDashboardPage() {
       });
       return;
     }
-  
+
     setIsImporting(true);
     toast({
       title: 'Importing Supplier Database',
       description: 'Checking existing data and importing new lenses...',
     });
-  
+
     try {
       const existingDocs = await getDocs(productsCollection);
-      const existingLenses = existingDocs.docs.map((docSnap) => ({
+      const mutableExistingLenses = existingDocs.docs.map((docSnap) => ({
         id: docSnap.id,
         ...(docSnap.data() as SupplierLens),
       }));
-  
+
       const newLenses: SupplierLens[] = [];
       const updates: { current: SupplierLens; updated: SupplierLens }[] = [];
-      const processedExistingLensIds = new Set<string>();
-  
+
       for (const importedLens of lensesToAppend) {
         const importedName = String(importedLens.name ?? '').trim().toLowerCase();
         const importedSupplier = String(importedLens.supplier ?? '').trim().toLowerCase();
-  
-        const existingLens = existingLenses.find(
+
+        const existingLensIndex = mutableExistingLenses.findIndex(
           (lens) =>
-            !processedExistingLensIds.has(lens.id) &&
             String(lens.name ?? '').trim().toLowerCase() === importedName &&
             String(lens.supplier ?? '').trim().toLowerCase() === importedSupplier
         );
-  
-        if (!existingLens) {
+        
+        if (existingLensIndex !== -1) {
+          const [existingLens] = mutableExistingLenses.splice(existingLensIndex, 1);
+          if (!areSupplierLensesEqual(existingLens, importedLens)) {
+            updates.push({
+              current: existingLens,
+              updated: {
+                ...existingLens,
+                ...importedLens,
+                id: existingLens.id,
+              },
+            });
+          }
+        } else {
           newLenses.push(importedLens);
-          continue;
-        }
-  
-        processedExistingLensIds.add(existingLens.id);
-  
-        if (!areSupplierLensesEqual(existingLens, importedLens)) {
-          updates.push({
-            current: existingLens,
-            updated: {
-              ...existingLens,
-              ...importedLens,
-              id: existingLens.id,
-            },
-          });
         }
       }
-  
-      for (let i = 0; i < newLenses.length; i += BATCH_SIZE) {
-        const batch = writeBatch(firestore);
-        const chunk = newLenses.slice(i, i + BATCH_SIZE);
-  
-        chunk.forEach((lens) => {
-          const docRef = doc(productsCollection);
-          batch.set(docRef, { ...lens, id: docRef.id });
-        });
-  
-        await batch.commit();
+
+      if (newLenses.length > 0) {
+          for (let i = 0; i < newLenses.length; i += BATCH_SIZE) {
+            const batch = writeBatch(firestore);
+            const chunk = newLenses.slice(i, i + BATCH_SIZE);
+            chunk.forEach((lens) => {
+              const docRef = doc(productsCollection);
+              batch.set(docRef, { ...lens, id: docRef.id });
+            });
+            await batch.commit();
+          }
       }
-  
+
       if (updates.length > 0) {
         setLensesToUpdate(updates);
         setUpdateConfirmOpen(true);
       }
-  
+
       if (newLenses.length > 0 || updates.length > 0) {
         toast({
           title: 'Import Complete',
@@ -431,6 +427,7 @@ export function SupplierDashboardPage() {
           mountTypes={mountTypes}
           suppliers={suppliers}
           lensesCount={filteredLenses.length}
+          totalLensesCount={lenses.length}
           isLoading={isLoading}
         />
       </div>
