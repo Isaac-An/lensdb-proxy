@@ -103,8 +103,10 @@ export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: Supplie
             
             return lensData as SupplierLens;
         })
-        .filter(lens => lens.name && lens.name.trim() !== '' && lens.supplier && lens.supplier.trim() !== '');
-
+        .filter(lens => 
+          (lens.name && lens.name.trim() !== '') ||
+          (lens.supplier && lens.supplier.trim() !== '')
+        )
 
         if (lensesFromFile.length === 0) {
             toast({
