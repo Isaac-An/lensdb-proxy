@@ -317,7 +317,7 @@ export function DashboardPage() {
   };
 
   const isLoading = isLoadingLenses || isImporting || isUserLoading;
-  const isButtonDisabled = isLoading || !!userError;
+  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV !== 'development');
 
   if (userError && process.env.NODE_ENV !== 'development') {
     return (
