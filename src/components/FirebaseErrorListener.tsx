@@ -15,8 +15,18 @@ export function FirebaseErrorListener() {
   useEffect(() => {
     // The callback now expects a strongly-typed error, matching the event payload.
     const handleError = (error: FirestorePermissionError) => {
-      // Set error in state to trigger a re-render.
-      setError(error);
+      if (process.env.NODE_ENV === 'production') {
+        // In production, set the error to be thrown. This will be caught by Next.js error boundaries.
+        setError(error);
+      } else {
+        // In development, we log the error to the console for visibility
+        // but do not throw it, to avoid crashing the entire application.
+        // This allows developers to see UI layout and style pages even if backend permissions aren't fully configured.
+        console.error(
+          'FirebaseErrorListener caught a permission error (suppressed in development):',
+          error
+        );
+      }
     };
 
     // The typed emitter will enforce that the callback for 'permission-error'
@@ -30,6 +40,7 @@ export function FirebaseErrorListener() {
   }, []);
 
   // On re-render, if an error exists in state, throw it.
+  // This will now only happen in production due to the logic in useEffect.
   if (error) {
     throw error;
   }

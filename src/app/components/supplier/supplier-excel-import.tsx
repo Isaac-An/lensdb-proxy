@@ -84,29 +84,26 @@ export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: Supplie
         };
         
         const lensesFromFile = dataRows.map((row: any[], rowIndex) => {
-            const lensData: Partial<SupplierLens> = { id: `imported-${Date.now()}-${rowIndex}` };
-            
-            normalizedHeaders.forEach((header, colIndex) => {
-              const firestoreKey = keyMap[header];
-              if (firestoreKey) {
-                const value = row[colIndex];
-                (lensData as any)[firestoreKey] = (value === null || value === undefined) ? '' : String(value);
-              }
-            });
-
-            // Ensure all properties exist, even if empty
-            for (const prop of allSupplierLensKeys) {
-                if (!(prop in lensData)) {
-                    (lensData as any)[prop] = '';
-                }
+          const lensData: Partial<SupplierLens> = { id: `imported-${Date.now()}-${rowIndex}` };
+          
+          normalizedHeaders.forEach((header, colIndex) => {
+            const firestoreKey = keyMap[header];
+            if (firestoreKey) {
+              const value = row[colIndex];
+              (lensData as any)[firestoreKey] = (value === null || value === undefined) ? '' : String(value);
             }
-            
-            return lensData as SupplierLens;
-        })
-        .filter(lens => 
-          (lens.name && lens.name.trim() !== '') ||
-          (lens.supplier && lens.supplier.trim() !== '')
-        )
+          });
+
+          // Ensure all properties exist, even if empty
+          for (const prop of allSupplierLensKeys) {
+              if (!(prop in lensData)) {
+                  (lensData as any)[prop] = '';
+              }
+          }
+          
+          return lensData as SupplierLens;
+      })
+      .filter(lens => lens.name && lens.name.trim() !== '');
 
         if (lensesFromFile.length === 0) {
             toast({

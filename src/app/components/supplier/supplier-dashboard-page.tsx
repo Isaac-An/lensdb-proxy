@@ -398,9 +398,9 @@ export function SupplierDashboardPage() {
   };
 
   const isLoading = isLoadingLenses || isImporting || isUserLoading;
-  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV !== 'development');
+  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV === 'production');
 
-  if (userError && process.env.NODE_ENV !== 'development') {
+  if (userError && process.env.NODE_ENV === 'production') {
     return (
         <div className="flex h-screen items-center justify-center bg-background">
             <div className="w-full max-w-md p-8 text-center">
