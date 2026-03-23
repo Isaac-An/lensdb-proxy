@@ -27,9 +27,11 @@ type FilterSidebarProps = {
   sensorSizes: string[];
   mountTypes: string[];
   suppliers: string[];
+  lensesCount: number;
+  isLoading: boolean;
 };
 
-export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, suppliers }: FilterSidebarProps) {
+export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, suppliers, lensesCount, isLoading }: FilterSidebarProps) {
   
   const handleRangeChange = (
     field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
@@ -50,10 +52,13 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
             <Button variant="ghost" size="sm" onClick={resetFilters}>
                 Reset
             </Button>
-            </div>
-            <p className="pt-2 text-sm text-muted-foreground">
-                Last synced: {new Date().toLocaleDateString()}
-            </p>
+        </div>
+        <p className="pt-2 text-sm text-muted-foreground">
+            Last synced: {new Date().toLocaleDateString()}
+        </p>
+        <p className="pt-2 text-sm font-semibold text-muted-foreground">
+            {isLoading ? 'Loading...' : `Lenses shown: ${lensesCount}`}
+        </p>
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
