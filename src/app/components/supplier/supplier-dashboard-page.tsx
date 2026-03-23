@@ -16,9 +16,9 @@ import { SupplierUpdateConfirmationDialog } from './supplier-update-confirmation
 export type SupplierFilters = {
   searchQuery: string;
   sensorSize: string;
+  origin: string;
   mountType: string;
   supplier: string;
-  origin: string;
   efl: [number | null, number | null];
   fNo: [number | null, number | null];
   fovD: [number | null, number | null];
@@ -30,9 +30,9 @@ export type SupplierFilters = {
 const initialFilters: SupplierFilters = {
   searchQuery: '',
   sensorSize: 'all',
+  origin: 'all',
   mountType: 'all',
   supplier: 'all',
-  origin: 'all',
   efl: [null, null],
   fNo: [null, null],
   fovD: [null, null],

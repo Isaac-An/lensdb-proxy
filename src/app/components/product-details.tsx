@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -13,6 +12,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 type ProductDetailsProps = {
   lens: Lens | null;
@@ -30,6 +30,7 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
     if (!lens) return null;
 
     const hasPdfUrl = lens.pdfUrl && lens.pdfUrl.startsWith('https://');
+    const isFromPdf = !!lens.sourcePath;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -58,6 +59,31 @@ export function ProductDetails({ lens, open, onOpenChange }: ProductDetailsProps
                     <DetailItem label="Mount Type" value={lens.mountType} />
                     <DetailItem label="Lens Structure" value={lens.lensStructure} />
                     <Separator />
+
+                    {isFromPdf && (
+                        <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">AI Extraction Status</p>
+                            {lens.extractionStatus === 'extracted' && (
+                                <Badge variant="secondary">Extracted Successfully</Badge>
+                            )}
+                            {lens.extractionStatus === 'failed' && (
+                                <div>
+                                    <Badge variant="destructive">Extraction Failed</Badge>
+                                    {lens.debug_error && (
+                                        <div className="mt-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
+                                            <p className="font-mono whitespace-pre-wrap">{lens.debug_error}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {lens.extractionStatus !== 'extracted' && lens.extractionStatus !== 'failed' && (
+                                <p className="text-sm text-muted-foreground">Processing...</p>
+                            )}
+                        </div>
+                    )}
+                    
+                    {isFromPdf && <Separator />}
+
                     <div className="flex justify-between items-center">
                         <p className="text-sm text-muted-foreground">PDF Document</p>
                         {hasPdfUrl ? (

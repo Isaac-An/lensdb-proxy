@@ -31,4 +31,5 @@ export interface Lens {
 
 export interface SupplierLens extends Lens {
   supplier: string;
+  countryOfOrigin?: string | null;
 }
