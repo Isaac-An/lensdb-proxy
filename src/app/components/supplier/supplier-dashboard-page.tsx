@@ -427,7 +427,7 @@ export function SupplierDashboardPage() {
           mountTypes={mountTypes}
           suppliers={suppliers}
           lensesCount={filteredLenses.length}
-          totalLensesCount={lenses.length}
+          totalLensesCount={lenses?.length ?? 0}
           isLoading={isLoading}
         />
       </div>
