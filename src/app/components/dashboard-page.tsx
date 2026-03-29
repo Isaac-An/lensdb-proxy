@@ -8,6 +8,7 @@ import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
 import { ExcelImport } from './excel-import';
+import { PdfUploader } from './pdf-uploader';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore';
@@ -214,6 +215,7 @@ export function DashboardPage() {
   };
 
 
+
   const { sensorSizes, mountTypes, sensorNames } = useMemo(() => {
     const customSensorSort = (a: string, b: string) => {
       const regex = /(\d+)\/(\d+(\.\d+)?)/;
@@ -253,6 +255,7 @@ export function DashboardPage() {
     const mountTypes = [...new Set((lenses || []).map(l => l.mountType).filter(Boolean))].sort();
     return { sensorSizes: sortedSensorSizes, mountTypes, sensorNames };
   }, [lenses]);
+
 
   const filteredLenses = useMemo(() => {
     const { searchQuery, sensorSize, mountType, efl, fNo, fovD, fovH, ttl, sortOrder, sensorName } = filters;
@@ -317,7 +320,7 @@ export function DashboardPage() {
   };
 
   const isLoading = isLoadingLenses || isImporting || isUserLoading;
-  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV === 'production');
+  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV === 'development');
 
   if (userError && process.env.NODE_ENV === 'production') {
     return (
@@ -353,6 +356,7 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
         >
+          <PdfUploader />
           <ExcelImport onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
