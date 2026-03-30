@@ -1,168 +1,89 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useFirebase } from '@/firebase';
-import { ref, uploadBytesResumable, getDownloadURL, UploadTask } from 'firebase/storage';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { UploadCloud, File, X, CheckCircle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
+import { getIdToken } from 'firebase/auth';
+import { Progress } from '@/components/ui/progress';
+
+const BUCKET = 'studio-3861763439-b3374.firebasestorage.app';
 
 export function PdfUploader() {
-  const { storage, user, isUserLoading, userError } = useFirebase();
-  const [uploadTask, setUploadTask] = useState<UploadTask | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [file, setFile] = useState<File | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const { auth } = useFirebase();
   const { toast } = useToast();
 
-  const isOpDisabled = !!uploadTask || isUserLoading || !!userError;
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length || !auth) return;
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (selectedFile) {
-        if (selectedFile.type === 'application/pdf') {
-            setFile(selectedFile);
-            setIsSuccess(false);
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Invalid File Type',
-                description: 'Please select a PDF file.',
-            });
-            clearFile(false);
-        }
-    }
-  };
-  
-  const handleUpload = () => {
-    if (!file) return;
-    
-    if (!storage || !user) {
-      toast({
-        variant: 'destructive',
-        title: 'Upload Error',
-        description: 'Authentication is required to upload files.',
-      });
+    const pdfs = files.filter(f => f.name.endsWith('.pdf'));
+    if (!pdfs.length) {
+      toast({ variant: 'destructive', title: 'Invalid file', description: 'Please select PDF files only.' });
       return;
     }
-    
-    const storageRef = ref(storage, `lens-pdfs/${file.name}`);
-    const newUploadTask = uploadBytesResumable(storageRef, file);
-    setUploadTask(newUploadTask);
 
-    newUploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const currentProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setProgress(currentProgress);
-      },
-      (error) => {
-        if (error.code !== 'storage/canceled') {
-            toast({
-                variant: 'destructive',
-                title: 'Upload Failed',
-                description: error.message,
-            });
-        }
-        setUploadTask(null);
-        setProgress(0);
-      },
-      () => {
-        getDownloadURL(newUploadTask.snapshot.ref).then(() => {
-          toast({
-            title: 'Upload Successful',
-            description: `${file.name} will be processed shortly.`,
-          });
-          setIsSuccess(true);
-          setUploadTask(null);
-          setTimeout(() => {
-            setIsOpen(false);
-          }, 2000);
+    setIsUploading(true);
+    setProgress(0);
+
+    try {
+      const token = await getIdToken(auth.currentUser!);
+      let completed = 0;
+
+      for (const file of pdfs) {
+        const encodedPath = encodeURIComponent(`lens-pdfs/${file.name}`);
+        const url = `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o?name=${encodedPath}&uploadType=media`;
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Authorization': `Firebase ${token}`,
+          },
+          body: file,
         });
-      }
-    );
-  };
-  
-  const triggerFileSelect = () => {
-      fileInputRef.current?.click();
-  };
 
-  const clearFile = (cancelUpload: boolean) => {
-      if (cancelUpload && uploadTask) {
-          uploadTask.cancel();
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err?.error?.message || 'Upload failed');
+        }
+
+        completed++;
+        setProgress(Math.round((completed / pdfs.length) * 100));
       }
-      setFile(null);
+
+      toast({
+        title: 'Upload complete',
+        description: `${pdfs.length} PDF(s) uploaded. AI extraction is running — lenses will appear shortly.`,
+      });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: err.message });
+    } finally {
+      setIsUploading(false);
       setProgress(0);
-      setIsSuccess(false);
-      if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
-  
-  const onOpenChange = (open: boolean) => {
-      if (!open) {
-          clearFile(true);
-      }
-      setIsOpen(open);
-  }
 
   return (
-    <Popover open={isOpen} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button size="sm" disabled={isOpDisabled}>
-            <UploadCloud />
-            Upload PDF
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80" align="end">
-        <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept=".pdf"
-        />
-        <div className="grid gap-4">
-            <div className="space-y-2">
-                <h4 className="font-medium leading-none">Upload Datasheet</h4>
-                <p className="text-sm text-muted-foreground">
-                    Upload a lens datasheet PDF for AI extraction.
-                </p>
-            </div>
-            {!file ? (
-                <Button variant="outline" onClick={triggerFileSelect}>Select PDF</Button>
-            ) : (
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                            <p className="truncate" title={file.name}>{file.name}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => clearFile(true)} disabled={!!uploadTask}>
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    {uploadTask ? (
-                         <Progress value={progress} />
-                    ) : isSuccess ? (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                           <CheckCircle className="h-4 w-4" />
-                           <span>Upload complete!</span>
-                        </div>
-                    ) : (
-                        <Button onClick={handleUpload} className="w-full">
-                            <UploadCloud className="mr-2 h-4 w-4"/>
-                            Upload and Process
-                        </Button>
-                    )}
-                </div>
-            )}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <>
+      <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+        <Upload className="mr-2 h-4 w-4" />
+        {isUploading ? `Uploading... ${progress}%` : 'Upload PDF'}
+      </Button>
+      {isUploading && <Progress value={progress} className="w-32" />}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept=".pdf"
+        multiple
+      />
+    </>
   );
 }
