@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import type { Lens } from '@/app/lib/types';
 import { ProductCard } from './product-card';
@@ -9,9 +8,11 @@ type ProductListProps = {
   lenses: Lens[];
   isLoading: boolean;
   onSelectLens: (lens: Lens) => void;
+  selectedForCompare?: Lens[];
+  onToggleCompare?: (lens: Lens) => void;
 };
 
-export function ProductList({ lenses, isLoading, onSelectLens }: ProductListProps) {
+export function ProductList({ lenses, isLoading, onSelectLens, selectedForCompare = [], onToggleCompare }: ProductListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -36,11 +37,18 @@ export function ProductList({ lenses, isLoading, onSelectLens }: ProductListProp
       </div>
     );
   }
-  
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {lenses.map((lens) => (
-        <ProductCard key={lens.id} lens={lens} onSelectLens={onSelectLens} />
+        <ProductCard
+          key={lens.id}
+          lens={lens}
+          onSelectLens={onSelectLens}
+          isSelected={selectedForCompare.some(l => l.id === lens.id)}
+          onToggleCompare={onToggleCompare}
+          compareDisabled={selectedForCompare.length >= 3}
+        />
       ))}
     </div>
   );

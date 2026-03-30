@@ -21,6 +21,7 @@ import {
 import type { Filters } from './dashboard-page';
 
 type FilterSidebarProps = {
+  lensCount?: number;
   filters: Filters;
   setFilters: React.Dispatch<React.SetStateAction<Filters>>;
   resetFilters: () => void;
@@ -29,7 +30,7 @@ type FilterSidebarProps = {
   sensorNames: string[];
 };
 
-export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, sensorNames }: FilterSidebarProps) {
+export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, sensorNames, lensCount }: FilterSidebarProps) {
   
   const handleRangeChange = (
     field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
@@ -51,9 +52,8 @@ export function FilterSidebar({ filters, setFilters, resetFilters, sensorSizes, 
                 Reset
             </Button>
             </div>
-            <p className="pt-2 text-sm text-muted-foreground">
-                Last synced: {new Date().toLocaleDateString()}
-            </p>
+            <p className="pt-2 text-sm text-muted-foreground">Last synced: {new Date().toLocaleDateString()}</p>
+            <p className="text-sm text-muted-foreground">Showing {lensCount ?? 0} {lensCount === 1 ? 'lens' : 'lenses'}</p>
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">

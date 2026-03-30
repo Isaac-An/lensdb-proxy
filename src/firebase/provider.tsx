@@ -3,7 +3,7 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import type { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
@@ -86,6 +86,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         // If sign-in fails below, the error will be set explicitly in the .catch() block.
         if (user) {
             setUserAuthState({ user, isUserLoading: false, userError: null });
+        } else {
+            setUserAuthState({ user: null, isUserLoading: false, userError: null });
         }
     }, (error) => {
         // This handles errors in the listener itself, which is rare.
@@ -93,18 +95,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
     });
 
-    // 2. Proactively attempt to sign in anonymously if there isn't already a user.
-    if (!auth.currentUser) {
-        signInAnonymously(auth).catch((error) => {
-            // This is the critical part. If anonymous sign-in fails, we explicitly
-            // capture that error and set it in our state.
-            console.error("Anonymous sign-in failed:", error);
-            setUserAuthState({ user: null, isUserLoading: false, userError: error });
-        });
-    } else {
-      // If there's already a user from a previous session, set it.
-      setUserAuthState({ user: auth.currentUser, isUserLoading: false, userError: null });
-    }
+    // No anonymous sign-in - users must log in with email/password
 
     return () => unsubscribe();
   }, [auth]);

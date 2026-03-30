@@ -13,6 +13,9 @@ import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { SupplierExcelImport } from './supplier-excel-import';
 import { SupplierUpdateConfirmationDialog } from './supplier-update-confirmation-dialog';
+import { LensComparison } from '../lens-comparison';
+import { CompareBar } from '../compare-bar';
+import type { Lens } from '@/app/lib/types';
 
 export type SupplierFilters = {
   searchQuery: string;
@@ -103,6 +106,8 @@ export function SupplierDashboardPage() {
 
   const [filters, setFilters] = useState<SupplierFilters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<SupplierLens | null>(null);
+  const [selectedForCompare, setSelectedForCompare] = useState<SupplierLens[]>([]);
+  const [isCompareOpen, setCompareOpen] = useState(false);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const [lensesToUpdate, setLensesToUpdate] = useState<
     { current: SupplierLens; updated: SupplierLens }[]
@@ -468,6 +473,19 @@ export function SupplierDashboardPage() {
         onConfirm={handleConfirmUpdate}
         lensesToUpdate={lensesToUpdate}
       />
+      <CompareBar
+        selected={selectedForCompare as unknown as Lens[]}
+        onRemove={id => setSelectedForCompare(prev => prev.filter(l => l.id !== id))}
+        onCompare={() => setCompareOpen(true)}
+        onClear={() => setSelectedForCompare([])}
+      />
+      {selectedForCompare.length >= 2 && (
+        <LensComparison
+          lenses={selectedForCompare as unknown as Lens[]}
+          open={isCompareOpen}
+          onOpenChange={setCompareOpen}
+        />
+      )}
     </div>
   );
 }

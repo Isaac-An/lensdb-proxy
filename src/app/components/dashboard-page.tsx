@@ -7,12 +7,14 @@ import { AppHeader } from './header';
 import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
 import { useToast } from '@/hooks/use-toast';
-import { ExcelImport } from './excel-import';
-import { PdfUploader } from './pdf-uploader';
+import { DataMenu } from './data-menu';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore';
 import { UpdateConfirmationDialog } from './update-confirmation-dialog';
+import { useIsAdmin } from '@/hooks/use-is-admin';
+import { LensComparison } from './lens-comparison';
+import { CompareBar } from './compare-bar';
 
 export type Filters = {
   searchQuery: string;
@@ -77,6 +79,7 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
 
 export function DashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
+  const { isAdmin } = useIsAdmin();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: lenses = [], isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
   
@@ -86,6 +89,8 @@ export function DashboardPage() {
   const [lensesToUpdate, setLensesToUpdate] = useState<{current: Lens, updated: Lens}[]>([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState<Lens[]>([]);
+  const [isCompareOpen, setCompareOpen] = useState(false);
   
   const { toast } = useToast();
 
@@ -285,7 +290,7 @@ export function DashboardPage() {
         return false;
       }
 
-      if (mountType !== 'all' && lens.mountType && lens.mountType && lens.mountType !== mountType) {
+      if (mountType !== 'all' && lens.mountType && lens.mountType !== mountType) {
         return false;
       }
 
@@ -314,13 +319,21 @@ export function DashboardPage() {
 
   }, [filters, lenses]);
 
+  const handleToggleCompare = (lens: Lens) => {
+    setSelectedForCompare(prev => {
+      if (prev.some(l => l.id === lens.id)) return prev.filter(l => l.id !== lens.id);
+      if (prev.length >= 3) return prev;
+      return [...prev, lens];
+    });
+  };
+
   const handleSelectLens = (lens: Lens) => {
     setSelectedLens(lens);
     setDetailsOpen(true);
   };
 
   const isLoading = isLoadingLenses || isImporting || isUserLoading;
-  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV === 'development');
+  const isButtonDisabled = isLoading || (!!userError && process.env.NODE_ENV === 'production');
 
   if (userError && process.env.NODE_ENV === 'production') {
     return (
@@ -349,6 +362,7 @@ export function DashboardPage() {
             sensorSizes={sensorSizes}
             mountTypes={mountTypes}
             sensorNames={sensorNames}
+            lensCount={filteredLenses.length}
           />
       </div>
       <div className="w-2/3 flex flex-col">
@@ -356,11 +370,10 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
         >
-          <PdfUploader />
-          <ExcelImport onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} />
+          <DataMenu onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} allLenses={lenses} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} />
+            <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} selectedForCompare={selectedForCompare} onToggleCompare={handleToggleCompare} />
         </main>
       </div>
 
@@ -368,7 +381,8 @@ export function DashboardPage() {
         <ProductDetails 
           lens={selectedLens} 
           open={isDetailsOpen} 
-          onOpenChange={setDetailsOpen} 
+          onOpenChange={setDetailsOpen}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -378,6 +392,21 @@ export function DashboardPage() {
         onConfirm={handleConfirmUpdate}
         lensesToUpdate={lensesToUpdate}
       />
+
+      <CompareBar
+        selected={selectedForCompare}
+        onRemove={(id) => setSelectedForCompare(prev => prev.filter(l => l.id !== id))}
+        onCompare={() => setCompareOpen(true)}
+        onClear={() => setSelectedForCompare([])}
+      />
+
+      {selectedForCompare.length >= 2 && (
+        <LensComparison
+          lenses={selectedForCompare}
+          open={isCompareOpen}
+          onOpenChange={setCompareOpen}
+        />
+      )}
     </div>
   );
 }

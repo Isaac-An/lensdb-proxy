@@ -32,7 +32,8 @@ type FilterSidebarProps = {
   isLoading: boolean;
 };
 
-export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, suppliers, lensesCount, totalLensesCount, isLoading }: FilterSidebarProps) {
+export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, suppliers, lensesCount, totalLensesCount, isLoading
+}: FilterSidebarProps) {
   
   const handleRangeChange = (
     field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',

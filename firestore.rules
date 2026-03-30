@@ -62,6 +62,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    match /invites/{token} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
     // Helper function to check if a user is signed in.
     function isSignedIn() {
       return request.auth != null;
