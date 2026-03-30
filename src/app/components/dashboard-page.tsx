@@ -273,19 +273,19 @@ export function DashboardPage() {
     }
 
     return processedLenses.filter(lens => {
-      if (searchQuery && !lens.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && !lens.name?.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
-      if (sensorSize !== 'all' && !lens.sensorSize.startsWith(sensorSize)) {
+      if (sensorSize !== 'all' && !lens.sensorSize?.startsWith(sensorSize)) {
         return false;
       }
 
-      if (sensorName !== 'all' && !lens.sensorSize.includes(sensorName)) {
+      if (sensorName !== 'all' && !lens.sensorSize?.includes(sensorName)) {
         return false;
       }
 
-      if (mountType !== 'all' && lens.mountType !== mountType) {
+      if (mountType !== 'all' && lens.mountType && lens.mountType && lens.mountType !== mountType) {
         return false;
       }
 
