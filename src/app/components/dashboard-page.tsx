@@ -373,6 +373,12 @@ export function DashboardPage() {
           <DataMenu onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} allLenses={lenses} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <CompareBar
+              selected={selectedForCompare}
+              onRemove={(id) => setSelectedForCompare(prev => prev.filter(l => l.id !== id))}
+              onCompare={() => setCompareOpen(true)}
+              onClear={() => setSelectedForCompare([])}
+            />
             <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} selectedForCompare={selectedForCompare} onToggleCompare={handleToggleCompare} />
         </main>
       </div>
@@ -392,14 +398,6 @@ export function DashboardPage() {
         onConfirm={handleConfirmUpdate}
         lensesToUpdate={lensesToUpdate}
       />
-
-      <CompareBar
-        selected={selectedForCompare}
-        onRemove={(id) => setSelectedForCompare(prev => prev.filter(l => l.id !== id))}
-        onCompare={() => setCompareOpen(true)}
-        onClear={() => setSelectedForCompare([])}
-      />
-
       {selectedForCompare.length >= 2 && (
         <LensComparison
           lenses={selectedForCompare}

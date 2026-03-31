@@ -397,6 +397,14 @@ export function SupplierDashboardPage() {
     });
   }, [filters, lenses]);
 
+  const handleToggleCompare = (lens: SupplierLens) => {
+    setSelectedForCompare(prev => {
+      if (prev.some(l => l.id === lens.id)) return prev.filter(l => l.id !== lens.id);
+      if (prev.length >= 3) return prev;
+      return [...prev, lens];
+    });
+  };
+
   const handleSelectLens = (lens: SupplierLens) => {
     setSelectedLens(lens);
     setDetailsOpen(true);
@@ -451,14 +459,21 @@ export function SupplierDashboardPage() {
         </SupplierHeader>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <CompareBar
+            selected={selectedForCompare as any}
+            onRemove={id => setSelectedForCompare(prev => prev.filter(l => l.id !== id))}
+            onCompare={() => setCompareOpen(true)}
+            onClear={() => setSelectedForCompare([])}
+          />
           <SupplierProductList
             lenses={filteredLenses}
             isLoading={isLoading}
             onSelectLens={handleSelectLens}
+            selectedForCompare={selectedForCompare}
+            onToggleCompare={handleToggleCompare}
           />
         </main>
       </div>
-
       {selectedLens && (
         <SupplierProductDetails
           lens={selectedLens}
@@ -466,19 +481,6 @@ export function SupplierDashboardPage() {
           onOpenChange={setDetailsOpen}
         />
       )}
-
-      <SupplierUpdateConfirmationDialog
-        isOpen={isUpdateConfirmOpen}
-        onClose={() => setUpdateConfirmOpen(false)}
-        onConfirm={handleConfirmUpdate}
-        lensesToUpdate={lensesToUpdate}
-      />
-      <CompareBar
-        selected={selectedForCompare as unknown as Lens[]}
-        onRemove={id => setSelectedForCompare(prev => prev.filter(l => l.id !== id))}
-        onCompare={() => setCompareOpen(true)}
-        onClear={() => setSelectedForCompare([])}
-      />
       {selectedForCompare.length >= 2 && (
         <LensComparison
           lenses={selectedForCompare as unknown as Lens[]}

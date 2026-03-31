@@ -16,7 +16,7 @@ export function CompareBar({ selected, onRemove, onCompare, onClear }: CompareBa
   if (selected.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border rounded-xl shadow-lg px-4 py-3">
+    <div className="sticky top-4 z-50 mx-auto w-fit z-50 flex items-center gap-3 bg-background border rounded-xl shadow-lg px-4 py-3">
       <span className="text-sm text-muted-foreground font-medium">Compare:</span>
       {selected.map(lens => (
         <div key={lens.id} className="flex items-center gap-1 bg-muted rounded-lg px-2 py-1 text-sm">
