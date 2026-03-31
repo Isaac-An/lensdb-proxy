@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { SupplierLens } from '@/app/lib/types';
 import { SupplierProductCard } from './supplier-product-card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,27 +10,45 @@ type ProductListProps = {
   onSelectLens: (lens: SupplierLens) => void;
   selectedForCompare?: SupplierLens[];
   onToggleCompare?: (lens: SupplierLens) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 };
 
-const BATCH_SIZE = 40;
+const LOCAL_BATCH = 40;
 
-export function SupplierProductList({ lenses, isLoading, onSelectLens, selectedForCompare = [], onToggleCompare }: ProductListProps) {
-  const [visibleCount, setVisibleCount] = React.useState(BATCH_SIZE);
+export function SupplierProductList({
+  lenses,
+  isLoading,
+  onSelectLens,
+  selectedForCompare = [],
+  onToggleCompare,
+  hasMore = false,
+  onLoadMore,
+}: ProductListProps) {
+  const [visibleCount, setVisibleCount] = useState(LOCAL_BATCH);
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => { setVisibleCount(BATCH_SIZE); }, [lenses]);
+  useEffect(() => {
+    setVisibleCount(LOCAL_BATCH);
+  }, [lenses]);
 
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        setVisibleCount(prev => Math.min(prev + BATCH_SIZE, lenses.length));
-      }
-    }, { threshold: 0.1 });
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (!entries[0].isIntersecting) return;
+        if (visibleCount < lenses.length) {
+          setVisibleCount(prev => Math.min(prev + LOCAL_BATCH, lenses.length));
+        } else if (hasMore && onLoadMore) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [lenses.length]);
+  }, [lenses.length, visibleCount, hasMore, onLoadMore]);
 
-  if (isLoading) {
+  if (isLoading && lenses.length === 0) {
     return (
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
         {Array.from({ length: 8 }).map((_, i) => (
@@ -46,7 +64,7 @@ export function SupplierProductList({ lenses, isLoading, onSelectLens, selectedF
     );
   }
 
-  if (lenses.length === 0) {
+  if (!isLoading && lenses.length === 0) {
     return (
       <div className='flex flex-col items-center justify-center text-center h-full py-20'>
         <h3 className='text-2xl font-bold tracking-tight'>No Lenses Found</h3>
@@ -56,6 +74,7 @@ export function SupplierProductList({ lenses, isLoading, onSelectLens, selectedF
   }
 
   const visibleLenses = lenses.slice(0, visibleCount);
+  const showLoader = visibleCount < lenses.length || hasMore;
 
   return (
     <div>
@@ -70,11 +89,23 @@ export function SupplierProductList({ lenses, isLoading, onSelectLens, selectedF
             compareDisabled={selectedForCompare.length >= 3}
           />
         ))}
+        {isLoading && lenses.length > 0 &&
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={`skel-${i}`} className='flex flex-col space-y-3'>
+              <Skeleton className='h-[125px] w-full rounded-xl' />
+              <div className='space-y-2'>
+                <Skeleton className='h-4 w-[250px]' />
+                <Skeleton className='h-4 w-[200px]' />
+              </div>
+            </div>
+          ))
+        }
       </div>
-      {visibleCount < lenses.length && (
+      {showLoader && (
         <div ref={loaderRef} className='flex justify-center py-8'>
           <div className='text-sm text-muted-foreground'>
-            Showing {visibleCount} of {lenses.length} lenses — scroll for more
+            Showing {Math.min(visibleCount, lenses.length)} of{' '}
+            {hasMore ? '…' : lenses.length} lenses — scroll for more
           </div>
         </div>
       )}

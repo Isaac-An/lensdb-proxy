@@ -1,0 +1,38 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "supplier_lenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mountType", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "supplier_lenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "supplier", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "supplier_lenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "countryOfOrigin", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "supplier_lenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "supplier", "order": "ASCENDING" },
+        { "fieldPath": "mountType", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
