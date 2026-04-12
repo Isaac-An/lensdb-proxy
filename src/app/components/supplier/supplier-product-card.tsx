@@ -14,7 +14,17 @@ type ProductCardProps = {
   compareDisabled?: boolean;
 };
 
+// If sensorSize is a plain number (bad AI extraction), don't display it
+function sanitizeSensorSize(val: any): string | null {
+  if (val === null || val === undefined) return null;
+  const str = String(val).trim();
+  if (/^\d+(\.\d+)?$/.test(str)) return null;
+  return str;
+}
+
 export function SupplierProductCard({ lens, onSelectLens, isSelected, onToggleCompare, compareDisabled }: ProductCardProps) {
+  const sensorDisplay = sanitizeSensorSize(lens.sensorSize);
+
   return (
     <Card className={'flex flex-col transition-all hover:shadow-lg hover:-translate-y-1 ' + (isSelected ? 'ring-2 ring-primary' : '')}>
       <CardHeader className='pb-2'>
@@ -39,9 +49,10 @@ export function SupplierProductCard({ lens, onSelectLens, isSelected, onToggleCo
       </CardHeader>
       <CardContent className='flex-1 p-4 pt-0'>
         <div className='text-sm text-muted-foreground space-y-1'>
-          {lens.sensorSize && <p><strong>Sensor:</strong> {lens.sensorSize}</p>}
+          {sensorDisplay && <p><strong>Sensor:</strong> {sensorDisplay}</p>}
           <p><strong>EFL:</strong> {lens.efl || '-'}mm</p>
           <p><strong>F. No.:</strong> {lens.fNo || '-'}</p>
+          {lens.maxImageCircle && <p><strong>Image Circle:</strong> {lens.maxImageCircle}mm</p>}
           {lens.fovD && <p><strong>FOV:</strong> {lens.fovD}°</p>}
           <p><strong>Mount:</strong> {lens.mountType || '-'}</p>
           {lens.ttl && <p><strong>TTL:</strong> {lens.ttl}mm</p>}

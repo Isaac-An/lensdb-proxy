@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -27,21 +26,32 @@ type FilterSidebarProps = {
   sensorSizes: string[];
   mountTypes: string[];
   suppliers: string[];
+  origins: string[];
   lensesCount: number;
   totalLensesCount: number;
   isLoading: boolean;
 };
 
-export function SupplierFilterSidebar({ filters, setFilters, resetFilters, sensorSizes, mountTypes, suppliers, lensesCount, totalLensesCount, isLoading
+export function SupplierFilterSidebar({
+  filters,
+  setFilters,
+  resetFilters,
+  sensorSizes,
+  mountTypes,
+  suppliers,
+  origins,
+  lensesCount,
+  totalLensesCount,
+  isLoading,
 }: FilterSidebarProps) {
-  
+
   const handleRangeChange = (
-    field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
+    field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl' | 'imageCircle',
     index: 0 | 1,
     value: string
   ) => {
     const numValue = value === '' ? null : Number(value);
-    const newRange = [...filters[field]];
+    const newRange = [...filters[field]] as [number | null, number | null];
     newRange[index] = numValue;
     setFilters(prev => ({ ...prev, [field]: newRange }));
   };
@@ -50,19 +60,19 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
     <div className="h-full flex flex-col">
       <div className="p-8 border-b">
         <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
-            <Button variant="ghost" size="sm" onClick={resetFilters}>
-                Reset
-            </Button>
+          <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
+            Reset
+          </Button>
         </div>
         <p className="pt-2 text-sm text-muted-foreground">
-            Last synced: {new Date().toLocaleDateString()}
+          Last synced: {new Date().toLocaleDateString()}
         </p>
         <p className="pt-2 text-sm text-muted-foreground">
-            {isLoading ? 'Loading...' : `Total lenses in DB: ${totalLensesCount}`}
+          {isLoading ? 'Loading...' : `Total lenses in DB: ${totalLensesCount}`}
         </p>
         <p className="pt-1 text-sm font-semibold text-muted-foreground">
-            {isLoading ? 'Loading...' : `Lenses shown: ${lensesCount}`}
+          {isLoading ? 'Loading...' : `Lenses shown: ${lensesCount}`}
         </p>
       </div>
       <div className="flex-1 overflow-y-auto">
@@ -71,6 +81,7 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
             <AccordionItem value="attributes">
               <AccordionTrigger>Attributes</AccordionTrigger>
               <AccordionContent className="space-y-4 pt-4">
+
                 <div className="space-y-2">
                   <Label>Sort by Name</Label>
                   <Select
@@ -87,6 +98,7 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label>Supplier</Label>
                   <Select
@@ -104,21 +116,26 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="space-y-2">
-                    <Label>Origin</Label>
-                    <Select
-                        value={filters.origin}
-                        onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value }))}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select origin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Origins</SelectItem>
-                            <SelectItem value="non-china">Non-China</SelectItem>
-                        </SelectContent>
-                    </Select>
+
+                <div className="space-y-2">
+                  <Label>Origin</Label>
+                  <Select
+                    value={filters.origin}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, origin: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select origin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Origins</SelectItem>
+                      <SelectItem value="non-china">Non-China</SelectItem>
+                      {origins.map(origin => (
+                        <SelectItem key={origin} value={origin}>{origin}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label>Sensor Size</Label>
                   <Select
@@ -136,9 +153,10 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label>Mount Type</Label>
-                   <Select
+                  <Select
                     value={filters.mountType}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, mountType: value }))}
                   >
@@ -153,13 +171,16 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
                     </SelectContent>
                   </Select>
                 </div>
+
               </AccordionContent>
             </AccordionItem>
+
             <AccordionItem value="numeric">
               <AccordionTrigger>Numeric Ranges</AccordionTrigger>
               <AccordionContent className="space-y-6 pt-4">
                 {renderRangeFilter('EFL (mm)', 'efl', filters, handleRangeChange)}
                 {renderRangeFilter('F. No.', 'fNo', filters, handleRangeChange)}
+                {renderRangeFilter('Max Image Circle (mm)', 'imageCircle', filters, handleRangeChange)}
                 {renderRangeFilter('FOV - Diagonal (°)', 'fovD', filters, handleRangeChange)}
                 {renderRangeFilter('FOV - Horizontal (°)', 'fovH', filters, handleRangeChange)}
                 {renderRangeFilter('TTL (mm)', 'ttl', filters, handleRangeChange)}
@@ -174,12 +195,12 @@ export function SupplierFilterSidebar({ filters, setFilters, resetFilters, senso
 
 function renderRangeFilter(
   label: string,
-  field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl',
+  field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl' | 'imageCircle',
   filters: SupplierFilters,
-  handler: (field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl', index: 0 | 1, value: string) => void
+  handler: (field: 'efl' | 'fNo' | 'fovD' | 'fovH' | 'ttl' | 'imageCircle', index: 0 | 1, value: string) => void
 ) {
   return (
-    <div className="space-y-2">
+    <div key={field} className="space-y-2">
       <Label>{label}</Label>
       <div className="flex items-center gap-2">
         <Input

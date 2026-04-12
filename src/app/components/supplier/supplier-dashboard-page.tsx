@@ -22,6 +22,7 @@ export type SupplierFilters = {
   fovD: [number | null, number | null];
   fovH: [number | null, number | null];
   ttl: [number | null, number | null];
+  imageCircle: [number | null, number | null];
   sortOrder: 'asc' | 'desc' | 'none';
 };
 
@@ -36,11 +37,28 @@ const initialFilters: SupplierFilters = {
   fovD: [null, null],
   fovH: [null, null],
   ttl: [null, null],
+  imageCircle: [null, null],
   sortOrder: 'none',
 };
 
 const PAGE_SIZE = 40;
 const FETCH_ALL_BATCH = 500;
+
+// Safely parse a numeric field stored as string or number
+function parseNum(val: any): number | null {
+  if (val === null || val === undefined || val === '') return null;
+  const n = parseFloat(String(val));
+  return isNaN(n) ? null : n;
+}
+
+// Sanitize sensorSize — if it's a number or looks like a calculation result, return null
+function sanitizeSensorSize(val: any): string | null {
+  if (val === null || val === undefined) return null;
+  const str = String(val).trim();
+  // If it's a plain number (no letters, no slash, no quote), it's bad AI data
+  if (/^\d+(\.\d+)?$/.test(str)) return null;
+  return str;
+}
 
 export function SupplierDashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
@@ -59,17 +77,18 @@ export function SupplierDashboardPage() {
   const [selectedForCompare, setSelectedForCompare] = useState<SupplierLens[]>([]);
   const [isCompareOpen, setCompareOpen] = useState(false);
 
-  // Derive filter dropdown options from the full dataset — guaranteed to reflect all 2997 lenses
+  // Derive filter dropdown options from the full dataset
   const filterOptions = useMemo(() => {
     if (allLenses.length === 0) return { mountTypes: [], suppliers: [], origins: [], sensorSizes: [] };
     const mountTypes = [...new Set(allLenses.map(l => l.mountType).filter(Boolean))].sort() as string[];
     const suppliers = [...new Set(allLenses.map(l => l.supplier).filter(Boolean))].sort() as string[];
     const origins = [...new Set(allLenses.map(l => l.countryOfOrigin).filter(Boolean))].sort() as string[];
-    const sensorSizes = [...new Set(allLenses.flatMap(l =>
-      typeof l.sensorSize === 'string'
-        ? l.sensorSize.split(',').map((s: string) => s.trim()).filter(Boolean)
-        : Array.isArray(l.sensorSize) ? l.sensorSize : []
-    ))].sort() as string[];
+    // Only include valid sensor size strings (not garbage numbers from bad AI extraction)
+    const sensorSizes = [...new Set(
+      allLenses
+        .map(l => sanitizeSensorSize(l.sensorSize))
+        .filter((s): s is string => s !== null && s.length > 0)
+    )].sort();
     return { mountTypes, suppliers, origins, sensorSizes };
   }, [allLenses]);
 
@@ -77,7 +96,7 @@ export function SupplierDashboardPage() {
     const c: any[] = [];
     if (f.mountType !== 'all') c.push(where('mountType', '==', f.mountType));
     if (f.supplier !== 'all') c.push(where('supplier', '==', f.supplier));
-    // origin is always client-side (supports 'non-china' special value)
+    // origin, sensorSize, numeric ranges are all client-side
     return c;
   }, []);
 
@@ -153,7 +172,7 @@ export function SupplierDashboardPage() {
   }, [firestore, buildConstraints]);
 
   const needsAllLenses = useMemo(() => {
-    const { searchQuery, efl, fNo, fovD, fovH, ttl, sensorSize, origin } = filters;
+    const { searchQuery, efl, fNo, fovD, fovH, ttl, imageCircle, sensorSize, origin } = filters;
     return !!(
       searchQuery ||
       sensorSize !== 'all' ||
@@ -162,7 +181,8 @@ export function SupplierDashboardPage() {
       fNo[0] !== null || fNo[1] !== null ||
       fovD[0] !== null || fovD[1] !== null ||
       fovH[0] !== null || fovH[1] !== null ||
-      ttl[0] !== null || ttl[1] !== null
+      ttl[0] !== null || ttl[1] !== null ||
+      imageCircle[0] !== null || imageCircle[1] !== null
     );
   }, [filters]);
 
@@ -184,26 +204,37 @@ export function SupplierDashboardPage() {
   const filteredLenses = useMemo(() => {
     const source = needsAllLenses ? allLenses : lenses;
     let result = [...source];
-    const { searchQuery, efl, fNo, fovD, fovH, ttl, sensorSize, origin } = filters;
+    const { searchQuery, efl, fNo, fovD, fovH, ttl, imageCircle, sensorSize, origin } = filters;
+
     if (searchQuery) result = result.filter(l => l.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+
     if (origin === 'non-china') {
       result = result.filter(l => l.countryOfOrigin?.toLowerCase() !== 'china');
     } else if (origin !== 'all') {
       result = result.filter(l => l.countryOfOrigin === origin);
     }
-    if (sensorSize !== 'all') result = result.filter(l => {
-      if (typeof l.sensorSize === 'string') return l.sensorSize.includes(sensorSize);
-      if (Array.isArray(l.sensorSize)) return l.sensorSize.includes(sensorSize);
-      return false;
-    });
-    if (efl[0] !== null) result = result.filter(l => parseFloat(String(l.efl)) >= efl[0]!);
-    if (efl[1] !== null) result = result.filter(l => parseFloat(String(l.efl)) <= efl[1]!);
-    if (fNo[0] !== null) result = result.filter(l => parseFloat(String(l.fNo)) >= fNo[0]!);
-    if (fNo[1] !== null) result = result.filter(l => parseFloat(String(l.fNo)) <= fNo[1]!);
-    if (fovD[0] !== null) result = result.filter(l => parseFloat(String(l.fovD)) >= fovD[0]!);
-    if (fovD[1] !== null) result = result.filter(l => parseFloat(String(l.fovD)) <= fovD[1]!);
-    if (ttl[0] !== null) result = result.filter(l => parseFloat(String(l.ttl)) >= ttl[0]!);
-    if (ttl[1] !== null) result = result.filter(l => parseFloat(String(l.ttl)) <= ttl[1]!);
+
+    if (sensorSize !== 'all') {
+      result = result.filter(l => {
+        const s = sanitizeSensorSize(l.sensorSize);
+        return s !== null && s === sensorSize;
+      });
+    }
+
+    // Numeric range filters — parse fields safely regardless of string/number storage
+    if (efl[0] !== null) result = result.filter(l => { const v = parseNum(l.efl); return v !== null && v >= efl[0]!; });
+    if (efl[1] !== null) result = result.filter(l => { const v = parseNum(l.efl); return v !== null && v <= efl[1]!; });
+    if (fNo[0] !== null) result = result.filter(l => { const v = parseNum(l.fNo); return v !== null && v >= fNo[0]!; });
+    if (fNo[1] !== null) result = result.filter(l => { const v = parseNum(l.fNo); return v !== null && v <= fNo[1]!; });
+    if (fovD[0] !== null) result = result.filter(l => { const v = parseNum(l.fovD); return v !== null && v >= fovD[0]!; });
+    if (fovD[1] !== null) result = result.filter(l => { const v = parseNum(l.fovD); return v !== null && v <= fovD[1]!; });
+    if (fovH[0] !== null) result = result.filter(l => { const v = parseNum(l.fovH); return v !== null && v >= fovH[0]!; });
+    if (fovH[1] !== null) result = result.filter(l => { const v = parseNum(l.fovH); return v !== null && v <= fovH[1]!; });
+    if (ttl[0] !== null) result = result.filter(l => { const v = parseNum(l.ttl); return v !== null && v >= ttl[0]!; });
+    if (ttl[1] !== null) result = result.filter(l => { const v = parseNum(l.ttl); return v !== null && v <= ttl[1]!; });
+    if (imageCircle[0] !== null) result = result.filter(l => { const v = parseNum(l.maxImageCircle); return v !== null && v >= imageCircle[0]!; });
+    if (imageCircle[1] !== null) result = result.filter(l => { const v = parseNum(l.maxImageCircle); return v !== null && v <= imageCircle[1]!; });
+
     return result;
   }, [lenses, allLenses, needsAllLenses, filters]);
 
