@@ -5,10 +5,12 @@ import { SupplierFilterSidebar } from './supplier-filter-sidebar';
 import { SupplierHeader } from './supplier-header';
 import { SupplierProductList } from './supplier-product-list';
 import { SupplierProductDetails } from './supplier-product-details';
+import { SupplierExcelImport } from './supplier-excel-import';
 import { useFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, startAfter, getDocs, getCountFromServer } from 'firebase/firestore';
+import { collection, query, orderBy, limit, startAfter, getDocs, getCountFromServer, writeBatch, doc } from 'firebase/firestore';
 import { LensComparison } from '../lens-comparison';
 import { CompareBar } from '../compare-bar';
+import { useToast } from '@/hooks/use-toast';
 import type { Lens } from '@/app/lib/types';
 
 export type SupplierFilters = {
@@ -57,10 +59,8 @@ function sanitizeSensorSize(val: any): string | null {
   return str || null;
 }
 
-// Extract mount type prefix: "M12*0.5P" → "M12", "C-Mount" → "C-Mount"
 function mountPrefix(val: string | null | undefined): string | null {
   if (!val) return null;
-  // Split on * or x (case insensitive) followed by a digit
   const match = val.match(/^([A-Za-z0-9\-]+?)[\*xX][\d]/);
   if (match) return match[1].trim();
   return val.trim();
@@ -68,6 +68,7 @@ function mountPrefix(val: string | null | undefined): string | null {
 
 export function SupplierDashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
+  const { toast } = useToast();
   const [filters, setFilters] = useState<SupplierFilters>(initialFilters);
   const [lenses, setLenses] = useState<SupplierLens[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +77,7 @@ export function SupplierDashboardPage() {
   const lastDocRef = useRef<any>(null);
   const [allLenses, setAllLenses] = useState<SupplierLens[]>([]);
   const [isFetchingAll, setIsFetchingAll] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const fetchIdRef = useRef(0);
   const fetchAllIdRef = useRef(0);
   const [selectedLens, setSelectedLens] = useState<SupplierLens | null>(null);
@@ -83,10 +85,8 @@ export function SupplierDashboardPage() {
   const [selectedForCompare, setSelectedForCompare] = useState<SupplierLens[]>([]);
   const [isCompareOpen, setCompareOpen] = useState(false);
 
-  // All filters are now client-side — derive options from full dataset
   const filterOptions = useMemo(() => {
     if (allLenses.length === 0) return { mountTypes: [], suppliers: [], origins: [], sensorSizes: [] };
-    // Mount type: deduplicate by prefix (M12*0.5 and M12*1 both become M12)
     const mountTypes = [...new Set(
       allLenses.map(l => mountPrefix(l.mountType)).filter((s): s is string => s !== null)
     )].sort();
@@ -98,7 +98,6 @@ export function SupplierDashboardPage() {
     return { mountTypes, suppliers, origins, sensorSizes };
   }, [allLenses]);
 
-  // All filtering is client-side now — no Firestore constraints needed
   const fetchLenses = useCallback(async (reset: boolean) => {
     if (!firestore) return;
     const fetchId = ++fetchIdRef.current;
@@ -135,7 +134,6 @@ export function SupplierDashboardPage() {
     }
   }, [firestore]);
 
-  // Fetch ALL lenses in background for filtering and dropdown options
   const fetchAllForSearch = useCallback(async () => {
     if (!firestore) return;
     const fetchAllId = ++fetchAllIdRef.current;
@@ -166,6 +164,61 @@ export function SupplierDashboardPage() {
       if (fetchAllId === fetchAllIdRef.current) setIsFetchingAll(false);
     }
   }, [firestore]);
+
+  const handleAppend = async (lensesToAppend: SupplierLens[]) => {
+    if (!firestore) return;
+    setIsImporting(true);
+    try {
+      const col = collection(firestore, 'supplier_lenses');
+      for (let i = 0; i < lensesToAppend.length; i += 500) {
+        const batch = writeBatch(firestore);
+        lensesToAppend.slice(i, i + 500).forEach(lens => {
+          const ref = doc(col);
+          batch.set(ref, { ...lens, id: ref.id });
+        });
+        await batch.commit();
+      }
+      toast({ title: 'Import Successful', description: `${lensesToAppend.length} lenses added.` });
+      lastDocRef.current = null;
+      fetchLenses(true);
+      fetchAllForSearch();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Import Failed', description: err.message });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleReplace = async (lensesToImport: SupplierLens[]) => {
+    if (!firestore) return;
+    setIsImporting(true);
+    toast({ title: 'Replacing...', description: 'Deleting old data, please wait.' });
+    try {
+      const col = collection(firestore, 'supplier_lenses');
+      // Delete all existing
+      const existing = await getDocs(col);
+      const deleteBatch = writeBatch(firestore);
+      existing.forEach(d => deleteBatch.delete(d.ref));
+      await deleteBatch.commit();
+      // Write new in batches
+      for (let i = 0; i < lensesToImport.length; i += 500) {
+        const batch = writeBatch(firestore);
+        lensesToImport.slice(i, i + 500).forEach(lens => {
+          const ref = doc(col);
+          batch.set(ref, { ...lens, id: ref.id });
+        });
+        await batch.commit();
+      }
+      toast({ title: 'Replace Successful', description: `${lensesToImport.length} lenses imported.` });
+      lastDocRef.current = null;
+      fetchLenses(true);
+      fetchAllForSearch();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Replace Failed', description: err.message });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const needsAllLenses = useMemo(() => {
     const { searchQuery, efl, fNo, fovD, fovH, ttl, imageCircle, sensorSize, origin, mountType, supplier } = filters;
@@ -205,24 +258,18 @@ export function SupplierDashboardPage() {
     const { searchQuery, efl, fNo, fovD, fovH, ttl, imageCircle, sensorSize, origin, mountType, supplier } = filters;
 
     if (searchQuery) result = result.filter(l => l.name?.toLowerCase().includes(searchQuery.toLowerCase()));
-
     if (supplier !== 'all') result = result.filter(l => l.supplier === supplier);
-
     if (origin === 'non-china') {
       result = result.filter(l => l.countryOfOrigin?.toLowerCase() !== 'china');
     } else if (origin !== 'all') {
       result = result.filter(l => l.countryOfOrigin === origin);
     }
-
-    // Mount type: match by prefix
     if (mountType !== 'all') {
       result = result.filter(l => mountPrefix(l.mountType) === mountType);
     }
-
     if (sensorSize !== 'all') {
       result = result.filter(l => sanitizeSensorSize(l.sensorSize) === sensorSize);
     }
-
     if (efl[0] !== null) result = result.filter(l => { const v = parseNum(l.efl); return v !== null && v >= efl[0]!; });
     if (efl[1] !== null) result = result.filter(l => { const v = parseNum(l.efl); return v !== null && v <= efl[1]!; });
     if (fNo[0] !== null) result = result.filter(l => { const v = parseNum(l.fNo); return v !== null && v >= fNo[0]!; });
@@ -284,6 +331,11 @@ export function SupplierDashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={q => setFilters(prev => ({ ...prev, searchQuery: q }))}
         >
+          <SupplierExcelImport
+            onAppend={handleAppend}
+            onReplace={handleReplace}
+            isDisabled={isLoading || isFetchingAll || isImporting}
+          />
         </SupplierHeader>
         <main className='flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8'>
           <CompareBar
@@ -294,7 +346,7 @@ export function SupplierDashboardPage() {
           />
           <SupplierProductList
             lenses={filteredLenses}
-            isLoading={isLoading || (needsAllLenses && isFetchingAll)}
+            isLoading={isLoading || (needsAllLenses && isFetchingAll) || isImporting}
             onSelectLens={handleSelectLens}
             selectedForCompare={selectedForCompare}
             onToggleCompare={handleToggleCompare}
