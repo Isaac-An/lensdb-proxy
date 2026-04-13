@@ -1,21 +1,152 @@
 'use client';
-
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
-import React from 'react';
+import { Search, FileInput } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useFirebase } from '@/firebase';
+import { collection, writeBatch, doc, getDocs, query, where } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
+import type { SupplierLens } from '@/app/lib/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type SupplierHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   children?: React.ReactNode;
+  onImportComplete?: () => void;
+};
+
+const normalizeHeader = (header: string) =>
+  typeof header === 'string' ? header.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+
+const keyMap: Record<string, string> = {
+  productname: 'name', name: 'name',
+  sensorsize: 'sensorSize',
+  eflmm: 'efl', efl: 'efl',
+  maximagecirclemm: 'maxImageCircle', maximagecircle: 'maxImageCircle',
+  fno: 'fNo',
+  fovdiagonal: 'fovD', fovd: 'fovD', fov: 'fovD',
+  fovhorizontal: 'fovH', fovh: 'fovH',
+  fovvertical: 'fovV', fovv: 'fovV',
+  ttlmm: 'ttl', ttl: 'ttl',
+  tvdistortion: 'tvDistortion',
+  relativeillumination: 'relativeIllumination',
+  chiefrayangle: 'chiefRayAngle',
+  mounttype: 'mountType', mount: 'mountType',
+  lensstructure: 'lensStructure',
+  price: 'price',
+  pdfurl: 'pdfUrl', pdf: 'pdfUrl',
+  supplier: 'supplier', suppliername: 'supplier',
+  brand: 'supplier', manufacturer: 'supplier',
+  countryoforigin: 'countryOfOrigin', origin: 'countryOfOrigin',
+  country: 'countryOfOrigin', madein: 'countryOfOrigin',
 };
 
 export function SupplierHeader({
   searchQuery,
   onSearchChange,
   children,
+  onImportComplete,
 }: SupplierHeaderProps) {
+  const { firestore } = useFirebase();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [parsedLenses, setParsedLenses] = useState<Partial<SupplierLens>[] | null>(null);
+  const [isConfirmOpen, setConfirmOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        if (json.length < 2) {
+          toast({ variant: 'destructive', title: 'Import Error', description: 'Spreadsheet is empty.' });
+          return;
+        }
+        const headers = json[0].map(normalizeHeader);
+        const lenses = json.slice(1)
+          .map((row: any[]) => {
+            const lens: any = {};
+            headers.forEach((h: string, i: number) => {
+              const key = keyMap[h];
+              if (key) lens[key] = row[i] !== null && row[i] !== undefined ? String(row[i]) : '';
+            });
+            return lens as Partial<SupplierLens>;
+          })
+          .filter(l => l.name && l.name.trim() !== '');
+
+        if (lenses.length === 0) {
+          toast({ variant: 'destructive', title: 'Import Warning', description: 'No valid lens rows found.' });
+          return;
+        }
+        setParsedLenses(lenses);
+        setConfirmOpen(true);
+      } catch (err: any) {
+        toast({ variant: 'destructive', title: 'Import Failed', description: err.message });
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleImport = async (mode: 'replace' | 'append') => {
+    if (!firestore || !parsedLenses) return;
+    setConfirmOpen(false);
+    setIsImporting(true);
+    toast({ title: 'Importing...', description: 'Please wait.' });
+
+    try {
+      const col = collection(firestore, 'supplier_lenses');
+
+      if (mode === 'replace') {
+        // Delete all existing docs first
+        const existing = await getDocs(col);
+        const deleteBatch = writeBatch(firestore);
+        existing.forEach(d => deleteBatch.delete(d.ref));
+        await deleteBatch.commit();
+      }
+
+      // Write in batches of 500
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < parsedLenses.length; i += BATCH_SIZE) {
+        const batch = writeBatch(firestore);
+        parsedLenses.slice(i, i + BATCH_SIZE).forEach(lens => {
+          const ref = doc(col);
+          batch.set(ref, { ...lens, id: ref.id });
+        });
+        await batch.commit();
+      }
+
+      toast({
+        title: 'Import Successful',
+        description: `${parsedLenses.length} lenses imported.`,
+      });
+      onImportComplete?.();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Import Failed', description: err.message });
+    } finally {
+      setIsImporting(false);
+      setParsedLenses(null);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
       <div className="flex items-center gap-4">
@@ -26,7 +157,6 @@ export function SupplierHeader({
           <a href="/">My Database</a>
         </Button>
       </div>
-
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <form className="ml-auto flex-1 sm:flex-initial" onSubmit={(e) => e.preventDefault()}>
           <div className="relative">
@@ -40,8 +170,43 @@ export function SupplierHeader({
             />
           </div>
         </form>
+
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isImporting}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <FileInput className="mr-2 h-4 w-4" />
+          {isImporting ? 'Importing...' : 'Import CSV'}
+        </Button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".xlsx,.xls,.csv"
+        />
+
         {children}
       </div>
+
+      <AlertDialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Import {parsedLenses?.length} lenses</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>Replace</strong> — deletes all existing supplier lenses and imports fresh.<br />
+              <strong>Append</strong> — adds new lenses without deleting existing ones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="outline" onClick={() => handleImport('append')}>Append</Button>
+            <AlertDialogAction onClick={() => handleImport('replace')}>Replace All</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }
