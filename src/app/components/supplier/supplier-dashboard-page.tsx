@@ -61,9 +61,13 @@ function sanitizeSensorSize(val: any): string | null {
 
 function mountPrefix(val: string | null | undefined): string | null {
   if (!val) return null;
-  const match = val.match(/^([A-Za-z0-9\-]+?)[\*xX][\d]/);
-  if (match) return match[1].trim();
-  return val.trim();
+  const str = val.trim();
+  // Match M-series: extract just "M" + number prefix before any separator
+  // Handles: M12*0.5, M12*P0.5, M12x0.5, M12xP0.5, M4.00XP0.20
+  const mMount = str.match(/^(M[\d\.]+)/i);
+  if (mMount) return mMount[1].replace(/\.0+$/, ''); // M4.00 → M4
+  // Keep named mounts as-is: C-Mount, CS-Mount, Board Type
+  return str;
 }
 
 export function SupplierDashboardPage() {
@@ -88,8 +92,20 @@ export function SupplierDashboardPage() {
   const filterOptions = useMemo(() => {
     if (allLenses.length === 0) return { mountTypes: [], suppliers: [], origins: [], sensorSizes: [] };
     const mountTypes = [...new Set(
-      allLenses.map(l => mountPrefix(l.mountType)).filter((s): s is string => s !== null)
-    )].sort();
+  allLenses.map(l => mountPrefix(l.mountType)).filter((s): s is string => s !== null)
+
+)].sort((a, b) => {
+  const aNum = parseFloat(a.replace(/^M/i, ''));
+  const bNum = parseFloat(b.replace(/^M/i, ''));
+  // Both M-series: sort numerically
+  if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+  // M-series before named mounts
+  if (!isNaN(aNum)) return -1;
+  if (!isNaN(bNum)) return 1;
+  // Both named: alphabetical
+  return a.localeCompare(b);
+});
+
     const suppliers = [...new Set(allLenses.map(l => l.supplier).filter(Boolean))].sort() as string[];
     const origins = [...new Set(allLenses.map(l => l.countryOfOrigin).filter(Boolean))].sort() as string[];
     const sensorSizes = [...new Set(

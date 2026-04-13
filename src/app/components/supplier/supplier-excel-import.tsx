@@ -60,6 +60,7 @@ export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: Supplie
             typeof header === 'string' ? header.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
         
         const normalizedHeaders = headerRow.map(normalizeHeader);
+        console.log('Headers found:', normalizedHeaders);
 
         const keyMap: { [key: string]: keyof SupplierLens } = {
           productname: 'name', name: 'name',
