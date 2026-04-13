@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useState } from 'react';
@@ -27,7 +26,8 @@ interface ExcelImportProps {
 const allLensKeys: (keyof Lens)[] = [
     'id', 'name', 'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD',
     'fovH', 'fovV', 'ttl', 'tvDistortion', 'relativeIllumination',
-    'chiefRayAngle', 'mountType', 'lensStructure', 'price', 'pdfUrl'
+    'chiefRayAngle', 'mountType', 'lensStructure', 'price', 'pdfUrl',
+    'countryOfOrigin',
 ];
 
 export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProps) {
@@ -57,12 +57,12 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
         const headerRow = json[0];
         const dataRows = json.slice(1);
 
-        const normalizeHeader = (header: string) => 
+        const normalizeHeader = (header: string) =>
             typeof header === 'string' ? header.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-        
+
         const normalizedHeaders = headerRow.map(normalizeHeader);
 
-        const keyMap: { [key: string]: keyof Lens } = {
+        const keyMap: { [key: string]: keyof Lens | 'supplier' | 'countryOfOrigin' } = {
           productname: 'name', name: 'name',
           sensorsize: 'sensorSize',
           eflmm: 'efl', efl: 'efl',
@@ -79,11 +79,20 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
           lensstructure: 'lensStructure',
           price: 'price',
           pdfurl: 'pdfUrl', pdf: 'pdfUrl',
+          // Supplier and origin columns
+          supplier: 'supplier' as any,
+          suppliername: 'supplier' as any,
+          brand: 'supplier' as any,
+          manufacturer: 'supplier' as any,
+          countryoforigin: 'countryOfOrigin',
+          origin: 'countryOfOrigin',
+          country: 'countryOfOrigin',
+          madein: 'countryOfOrigin',
         };
-        
+
         const lensesFromFile = dataRows.map((row: any[], rowIndex) => {
             const lensData: Partial<Lens> = { id: `imported-${Date.now()}-${rowIndex}` };
-            
+
             normalizedHeaders.forEach((header, colIndex) => {
               const firestoreKey = keyMap[header];
               if (firestoreKey) {
@@ -98,11 +107,10 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
                     (lensData as any)[prop] = '';
                 }
             }
-            
+
             return lensData as Lens;
         })
         .filter(lens => lens.name && lens.name.trim() !== '');
-
 
         if (lensesFromFile.length === 0) {
             toast({
@@ -133,13 +141,11 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
 
   const handleConfirm = (action: 'replace' | 'append') => {
     if (!importedLenses) return;
-    
     if (action === 'replace') {
       onReplace(importedLenses);
     } else {
       onAppend(importedLenses);
     }
-    
     setConfirmOpen(false);
     setImportedLenses(null);
   };
@@ -157,7 +163,7 @@ export function ExcelImport({ onAppend, onReplace, isDisabled }: ExcelImportProp
         className="hidden"
         accept=".xlsx, .xls, .csv"
       />
-      
+
       <AlertDialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
