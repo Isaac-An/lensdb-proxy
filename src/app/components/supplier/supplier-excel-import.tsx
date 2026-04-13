@@ -60,11 +60,15 @@ export function SupplierExcelImport({ onAppend, onReplace, isDisabled }: Supplie
             typeof header === 'string' ? header.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
         
         const normalizedHeaders = headerRow.map(normalizeHeader);
-        console.log('Headers found:', normalizedHeaders);
+        console.log('Normalized headers:', normalizedHeaders);
+        console.log('First data row:', dataRows[0]);
 
         const keyMap: { [key: string]: keyof SupplierLens } = {
           productname: 'name', name: 'name',
           supplier: 'supplier',
+          suppliername: 'supplier',
+          brand: 'supplier',
+          manufacturer: 'supplier',
           sensorsize: 'sensorSize',
           eflmm: 'efl', efl: 'efl',
           maximagecirclemm: 'maxImageCircle', maximagecircle: 'maxImageCircle',
