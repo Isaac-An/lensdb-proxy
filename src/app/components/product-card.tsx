@@ -62,7 +62,7 @@ export function ProductCard({ lens, onSelectLens, isSelected, onToggleCompare, c
         </div>
       </CardContent>
       <CardFooter className='p-4 pt-0'>
-        <Button variant='outline' className='w-full' onClick={() => onSelectLens(lens)}>View Details</Button>
+        <Button variant='outline' className='w-full hover:bg-primary hover:text-primary-foreground hover:border-primary' onClick={() => onSelectLens(lens)}>View Details</Button>
       </CardFooter>
     </Card>
   );

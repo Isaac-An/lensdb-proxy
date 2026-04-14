@@ -2,14 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Lens } from '@/app/lib/types';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,13 +11,7 @@ import { useFirebase } from '@/firebase';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ProductDetailsProps = {
   isAdmin?: boolean;
@@ -35,39 +21,109 @@ type ProductDetailsProps = {
 };
 
 const SENSOR_PRESETS: Record<string, { w: number; h: number; d: number }> = {
-  'Full Frame (36x24mm)':   { w: 36,    h: 24,   d: 43.27 },
-  'APS-C (23.5x15.6mm)':   { w: 23.5,  h: 15.6, d: 28.21 },
-  '1" (12.8x9.6mm)':       { w: 12.8,  h: 9.6,  d: 16.0  },
-  '1/1.2" (10.67x8mm)':    { w: 10.67, h: 8,    d: 13.33 },
-  '1/1.8" (7.18x5.32mm)':  { w: 7.18,  h: 5.32, d: 8.93  },
-  '1/2" (6.4x4.8mm)':      { w: 6.4,   h: 4.8,  d: 8.0   },
-  '1/2.3" (6.16x4.62mm)':  { w: 6.16,  h: 4.62, d: 7.70  },
-  '1/2.5" (5.76x4.29mm)':  { w: 5.76,  h: 4.29, d: 7.18  },
-  '1/3" (4.8x3.6mm)':      { w: 4.8,   h: 3.6,  d: 6.0   },
-  '1/3.6" (4x3mm)':        { w: 4,     h: 3,    d: 5.0   },
-  '1/4" (3.2x2.4mm)':      { w: 3.2,   h: 2.4,  d: 4.0   },
-  '1/4.5" (2.84x2.13mm)':  { w: 2.84,  h: 2.13, d: 3.55  },
-  '1/6" (2.4x1.8mm)':      { w: 2.4,   h: 1.8,  d: 3.0   },
-  'IMX185 (1/2.8")':        { w: 5.6,   h: 3.2,  d: 6.46  },
-  'IMX265 (1/1.8")':        { w: 7.18,  h: 5.32, d: 8.93  },
-  'IMX273 (1/2.9")':        { w: 5.37,  h: 4.04, d: 6.71  },
-  'IMX290 (1/2.8")':        { w: 5.6,   h: 3.2,  d: 6.46  },
-  'IMX296 (1/2.9")':        { w: 5.37,  h: 4.04, d: 6.71  },
-  'IMX297 (1/4.5")':        { w: 2.84,  h: 2.13, d: 3.55  },
-  'IMX327 (1/2.8")':        { w: 5.6,   h: 3.2,  d: 6.46  },
-  'IMX335 (1/2.8")':        { w: 5.6,   h: 3.2,  d: 6.46  },
-  'IMX415 (1/2.8")':        { w: 5.6,   h: 3.2,  d: 6.46  },
-  'IMX464 (1/1.8")':        { w: 7.18,  h: 5.32, d: 8.93  },
-  'IMX485 (1/1.2")':        { w: 10.67, h: 8,    d: 13.33 },
-  'OV2311 (1/2.9")':        { w: 5.37,  h: 4.04, d: 6.71  },
-  'OV4689 (1/3")':          { w: 4.8,   h: 3.6,  d: 6.0   },
-  'OV7251 (1/7.5")':        { w: 2.0,   h: 1.5,  d: 2.5   },
-  'AR0234 (1/2.6")':        { w: 5.86,  h: 3.28, d: 6.73  },
+  '1" (12.8x9.6mm)':         { w: 12.8,  h: 9.6,   d: 16.0  },
+  '1/1.2" (10.67x8mm)':      { w: 10.67, h: 8,     d: 13.33 },
+  '1/1.72" (9.07x5.1mm)':    { w: 9.07,  h: 5.1,   d: 10.42 },
+  '1/1.8" (7.18x5.32mm)':    { w: 7.18,  h: 5.32,  d: 8.93  },
+  '1/2" (6.4x4.8mm)':        { w: 6.4,   h: 4.8,   d: 8.0   },
+  '1/2.3" (6.16x4.62mm)':    { w: 6.16,  h: 4.62,  d: 7.70  },
+  '1/2.4" (5.79x4.01mm)':    { w: 5.79,  h: 4.01,  d: 7.04  },
+  '1/2.44" (5.67x3.89mm)':   { w: 5.67,  h: 3.89,  d: 6.87  },
+  '1/2.5" (5.76x4.29mm)':    { w: 5.76,  h: 4.29,  d: 7.18  },
+  '1/2.53" (5.70x4.28mm)':   { w: 5.70,  h: 4.28,  d: 7.13  },
+  '1/2.6" (5.55x4.17mm)':    { w: 5.55,  h: 4.17,  d: 6.94  },
+  '1/2.7" (5.37x4.04mm)':    { w: 5.37,  h: 4.04,  d: 6.71  },
+  '1/2.8" (5.12x3.84mm)':    { w: 5.12,  h: 3.84,  d: 6.40  },
+  '1/2.9" (4.96x3.72mm)':    { w: 4.96,  h: 3.72,  d: 6.20  },
+  '1/3" (4.8x3.6mm)':        { w: 4.8,   h: 3.6,   d: 6.0   },
+  '1/3.2" (4.54x3.42mm)':    { w: 4.54,  h: 3.42,  d: 5.68  },
+  '1/3.6" (4x3mm)':          { w: 4,     h: 3,     d: 5.0   },
+  '1/3.9" (3.69x2.77mm)':    { w: 3.69,  h: 2.77,  d: 4.61  },
+  '1/4" (3.2x2.4mm)':        { w: 3.2,   h: 2.4,   d: 4.0   },
+  '1/4.3" (2.98x2.23mm)':    { w: 2.98,  h: 2.23,  d: 3.72  },
+  '1/4.5" (2.84x2.13mm)':    { w: 2.84,  h: 2.13,  d: 3.55  },
+  '1/5" (2.88x2.16mm)':      { w: 2.88,  h: 2.16,  d: 3.60  },
+  '1/6" (2.4x1.8mm)':        { w: 2.4,   h: 1.8,   d: 3.0   },
+  '1/7" (2.16x1.62mm)':      { w: 2.16,  h: 1.62,  d: 2.70  },
+  '1/7.25" (2.09x1.57mm)':   { w: 2.09,  h: 1.57,  d: 2.61  },
+  '1/7.5" (2.0x1.5mm)':      { w: 2.0,   h: 1.5,   d: 2.5   },
+  '1/9" (1.6x1.2mm)':        { w: 1.6,   h: 1.2,   d: 2.0   },
+  '1/10" (1.28x0.96mm)':     { w: 1.28,  h: 0.96,  d: 1.60  },
+  'APS-C (23.5x15.6mm)':     { w: 23.5,  h: 15.6,  d: 28.21 },
+  'AR0145 (1/4.3")':          { w: 2.98,  h: 2.23,  d: 3.72  },
+  'AR0234 (1/2.6")':          { w: 5.55,  h: 4.17,  d: 6.94  },
+  'AR0246 (1/4")':            { w: 3.2,   h: 2.4,   d: 4.0   },
+  'AR0522D (1/2.5")':         { w: 5.76,  h: 4.29,  d: 7.18  },
+  'AR0822 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'AR0823AT (1/1.8")':        { w: 7.18,  h: 5.32,  d: 8.93  },
+  'AR0830 (1/2.9")':          { w: 4.96,  h: 3.72,  d: 6.20  },
+  'AR1335 (1/3.2")':          { w: 4.54,  h: 3.42,  d: 5.68  },
+  'AR2020 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'Full Frame (36x24mm)':     { w: 36,    h: 24,    d: 43.27 },
+  'GC2053 (1/2.9")':          { w: 4.96,  h: 3.72,  d: 6.20  },
+  'GC4023 (1/2.7")':          { w: 5.37,  h: 4.04,  d: 6.71  },
+  'IMX178 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'IMX317 (1/2.5")':          { w: 5.76,  h: 4.29,  d: 7.18  },
+  'IMX334 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'IMX335 (1/2.8")':          { w: 5.12,  h: 3.84,  d: 6.40  },
+  'IMX347 (1/2")':            { w: 6.4,   h: 4.8,   d: 8.0   },
+  'IMX377 (1/2.3")':          { w: 6.16,  h: 4.62,  d: 7.70  },
+  'IMX385 (1/2")':            { w: 6.4,   h: 4.8,   d: 8.0   },
+  'IMX415 (1/2.8")':          { w: 5.12,  h: 3.84,  d: 6.40  },
+  'IMX477 (1/2.5")':          { w: 5.76,  h: 4.29,  d: 7.18  },
+  'IMX477/IMX378 (1/2.3")':   { w: 6.16,  h: 4.62,  d: 7.70  },
+  'IMX568 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'IMX577 (1/2.3")':          { w: 6.16,  h: 4.62,  d: 7.70  },
+  'IMX586 (1/2")':            { w: 6.4,   h: 4.8,   d: 8.0   },
+  'IMX675 (1/2.8")':          { w: 5.12,  h: 3.84,  d: 6.40  },
+  'IMX678 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'IMX728 (1/1.72")':         { w: 9.07,  h: 5.1,   d: 10.42 },
+  'MIRA050 (1/7")':           { w: 2.16,  h: 1.62,  d: 2.70  },
+  'MIRA220 (1/2.7")':         { w: 5.37,  h: 4.04,  d: 6.71  },
+  'OS05A20 (1/2.7")':         { w: 5.37,  h: 4.04,  d: 6.71  },
+  'OV2311 (1/2.9")':          { w: 4.96,  h: 3.72,  d: 6.20  },
+  'OV5675 (1/5")':            { w: 2.88,  h: 2.16,  d: 3.60  },
+  'OV7251 (1/7.5")':          { w: 2.0,   h: 1.5,   d: 2.5   },
+  'OX03J10 (1/2.4")':         { w: 5.79,  h: 4.01,  d: 7.04  },
+  'OX05B1S (1/2.53")':        { w: 5.70,  h: 4.28,  d: 7.13  },
+  'SC301IoT (1/2.8")':        { w: 5.12,  h: 3.84,  d: 6.40  },
+  'SC4210 (1/1.8")':          { w: 7.18,  h: 5.32,  d: 8.93  },
+  'SC501AI (1/2.7")':         { w: 5.37,  h: 4.04,  d: 6.71  },
+  'ST VB1740 (1/3")':         { w: 4.3,   h: 3.2,   d: 5.33  },
+  'ST VD1943 (1/2.5")':       { w: 5.76,  h: 4.29,  d: 7.18  },
+  'ST VD55G1 (1/10")':        { w: 1.28,  h: 0.96,  d: 1.60  },
+  'ST VD56G3 (1/4")':         { w: 3.2,   h: 2.4,   d: 4.0   },
+  'VD66GY (1/4")':            { w: 3.2,   h: 2.4,   d: 4.0   },
 };
 
 function calcFov(sensorDim: number, efl: number): number {
   return 2 * (180 / Math.PI) * Math.atan(sensorDim / (2 * efl));
 }
+
+const TEXT = 'rgba(76,76,76,1)';
+const TEXT_MUTED = 'rgba(28,28,28,1)';
+
+const glassStyle = {
+  background: 'rgba(255, 255, 255, 1)',
+  backdropFilter: 'blur(20px) saturate(200%)',
+  WebkitBackdropFilter: 'blur(200px) saturate(200%)',
+  border: '1px solid rgba(255,255,255,0.85)',
+  boxShadow: '0 2px 32px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,1) inset',
+} as const;
+
+const backdropStyle = {
+  background: 'rgba(100,100,100,0.55)',
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+} as const;
+
+const inputStyle = {
+  background: 'rgba(255,255,255,0.4)',
+  border: '1px solid rgba(255,255,255,0.25)',
+  color: TEXT,
+};
+
+const divider = <div style={{ height: '1px', background: 'rgb(134,134,134)', margin: '4px 0' }} />;
 
 function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
   const [sensorPreset, setSensorPreset] = useState('');
@@ -100,63 +156,40 @@ function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sensor</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Sensor</Label>
         <Select value={sensorPreset} onValueChange={v => { setSensorPreset(v); setCustomW(''); setCustomH(''); }}>
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder="Select sensor..." />
-          </SelectTrigger>
+          <SelectTrigger className="h-8 text-xs" style={inputStyle}><SelectValue placeholder="Select sensor..." /></SelectTrigger>
           <SelectContent>
             <SelectItem value="custom">Custom</SelectItem>
-            {Object.keys(SENSOR_PRESETS).map(k => (
-              <SelectItem key={k} value={k} className="text-xs">{k}</SelectItem>
-            ))}
+            {Object.keys(SENSOR_PRESETS).map(k => <SelectItem key={k} value={k} className="text-xs">{k}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
-
       {(!sensorPreset || sensorPreset === 'custom') && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Custom size (mm)</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Custom size (mm)</Label>
           <div className="flex gap-2">
-            <Input type="number" placeholder="Width" value={customW} onChange={e => setCustomW(e.target.value)} className="h-8 text-xs" />
-            <Input type="number" placeholder="Height" value={customH} onChange={e => setCustomH(e.target.value)} className="h-8 text-xs" />
+            <Input type="number" placeholder="Width" value={customW} onChange={e => setCustomW(e.target.value)} className="h-8 text-xs" style={inputStyle} />
+            <Input type="number" placeholder="Height" value={customH} onChange={e => setCustomH(e.target.value)} className="h-8 text-xs" style={inputStyle} />
           </div>
         </div>
       )}
-
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">EFL (mm)</Label>
-        <Input
-          type="number"
-          placeholder={lensEfl ? `${lensEfl} (from lens)` : 'Enter EFL...'}
-          value={eflOverride}
-          onChange={e => setEflOverride(e.target.value)}
-          className="h-8 text-xs"
-        />
-        {!eflOverride && lensEfl && (
-          <p className="text-xs text-muted-foreground">Using lens EFL: {lensEfl}mm</p>
-        )}
+        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>EFL (mm)</Label>
+        <Input type="number" placeholder={lensEfl ? `${lensEfl} (from lens)` : 'Enter EFL...'} value={eflOverride} onChange={e => setEflOverride(e.target.value)} className="h-8 text-xs" style={inputStyle} />
+        {!eflOverride && lensEfl && <p className="text-xs" style={{ color: TEXT_MUTED }}>Using lens EFL: {lensEfl}mm</p>}
       </div>
-
       {results ? (
-        <div className="rounded-md bg-muted p-3 space-y-2">
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Horizontal</span>
-            <span className="font-semibold">{results.horizontal.toFixed(1)}°</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Vertical</span>
-            <span className="font-semibold">{results.vertical.toFixed(1)}°</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Diagonal</span>
-            <span className="font-semibold">{results.diagonal.toFixed(1)}°</span>
-          </div>
+        <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)' }}>
+          {[['Horizontal', results.horizontal], ['Vertical', results.vertical], ['Diagonal', results.diagonal]].map(([label, val]) => (
+            <div key={label as string} className="flex justify-between text-xs">
+              <span style={{ color: TEXT_MUTED }}>{label}</span>
+              <span className="font-semibold" style={{ color: TEXT }}>{(val as number).toFixed(1)}°</span>
+            </div>
+          ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          {!dims ? 'Select a sensor to calculate FOV.' : 'Enter a valid EFL to calculate.'}
-        </p>
+        <p className="text-xs" style={{ color: TEXT_MUTED }}>{!dims ? 'Select a sensor to calculate FOV.' : 'Enter a valid EFL to calculate.'}</p>
       )}
     </div>
   );
@@ -200,7 +233,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     setShowFov(false);
   }, [lens]);
 
-  if (!lens) return null;
+  if (!lens || !open) return null;
 
   const hasPdfUrl = lens.pdfUrl && lens.pdfUrl.startsWith('https://');
   const isFromPdf = !!lens.sourcePath;
@@ -209,46 +242,30 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     if (!firestore || !lens.id) return;
     setIsSaving(true);
     try {
-      const docRef = doc(firestore, 'products', lens.id);
-      await setDoc(docRef, { ...editData, updatedAt: new Date() }, { merge: true });
+      await setDoc(doc(firestore, 'products', lens.id), { ...editData, updatedAt: new Date() }, { merge: true });
       toast({ title: 'Saved', description: 'Lens updated successfully.' });
       setIsEditing(false);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Save failed', description: err.message });
-    } finally {
-      setIsSaving(false);
-    }
+    } finally { setIsSaving(false); }
   };
 
-  const handleCancel = () => {
-    setEditData({ ...lens });
-    setIsEditing(false);
-  };
+  const handleCancel = () => { setEditData({ ...lens }); setIsEditing(false); };
 
   const handleReExtract = async () => {
     if (!lens.pdfUrl || !lens.sourcePath) return;
     setIsReExtracting(true);
     try {
-      const { getIdToken } = await import('firebase/auth');
-      const { getAuth } = await import('firebase/auth');
-      const currentAuth = getAuth();
-      const token = await getIdToken(currentAuth.currentUser!);
-      const response = await fetch(lens.pdfUrl);
-      const blob = await response.blob();
-      const BUCKET = 'studio-3861763439-b3374.firebasestorage.app';
-      const encodedPath = encodeURIComponent(lens.sourcePath);
-      const uploadUrl = 'https://firebasestorage.googleapis.com/v0/b/' + BUCKET + '/o?name=' + encodedPath + '&uploadType=media';
-      await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/pdf', 'Authorization': 'Firebase ' + token },
-        body: blob,
+      const { getIdToken, getAuth } = await import('firebase/auth');
+      const token = await getIdToken(getAuth().currentUser!);
+      const blob = await (await fetch(lens.pdfUrl)).blob();
+      await fetch(`https://firebasestorage.googleapis.com/v0/b/studio-3861763439-b3374.firebasestorage.app/o?name=${encodeURIComponent(lens.sourcePath)}&uploadType=media`, {
+        method: 'POST', headers: { 'Content-Type': 'application/pdf', 'Authorization': 'Firebase ' + token }, body: blob,
       });
       toast({ title: 'Re-extraction started', description: 'The lens data will update shortly.' });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Re-extraction failed', description: err.message });
-    } finally {
-      setIsReExtracting(false);
-    }
+    } finally { setIsReExtracting(false); }
   };
 
   const handleDelete = async () => {
@@ -259,167 +276,127 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
       onOpenChange(false);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Delete failed', description: err.message });
-    } finally {
-      setIsDeleting(false);
-    }
+    } finally { setIsDeleting(false); }
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className="overflow-y-auto transition-all duration-300"
-        style={{ width: showFov ? '860px' : '480px', maxWidth: '95vw' }}
-      >
-        <div className={showFov ? 'flex gap-6 h-full' : ''}>
-  {/* Left: FOV Calculator panel */}
-  {showFov && (
-    <div className="w-64 shrink-0 border-r pr-6 pt-2 overflow-y-auto">
-      <p className="text-sm font-semibold mb-4">FOV Calculator</p>
-      <FovCalculator lensEfl={lens.efl} />
-    </div>
-  )}
-  {/* Right: Specs */}
-  <div className={showFov ? 'flex-1 min-w-0 overflow-y-auto' : ''}>
-            <SheetHeader className="text-left">
-              <div className="flex items-start justify-between pr-8">
-                <div>
-                  <SheetTitle className="text-2xl">{lens.name}</SheetTitle>
-                  <SheetDescription>Detailed specifications for {lens.name}.</SheetDescription>
-                </div>
-                <div className="flex gap-2 flex-wrap justify-end">
-                  <Button
-                    variant={showFov ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setShowFov(v => !v)}
-                    title="FOV Calculator"
-                  >
-                    <Calculator className="h-3 w-3 mr-1" />
-                    FOV
-                  </Button>
-                  {!isEditing ? (
-                    <>
-                      {isAdmin && <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                        <Pencil className="h-3 w-3 mr-1" />Edit
-                      </Button>}
-                      {isAdmin && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete {lens.name}?</AlertDialogTitle>
-                              <AlertDialogDescription>This will permanently remove this lens. This cannot be undone.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                {isDeleting ? 'Deleting...' : 'Delete'}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
-                        <X className="h-3 w-3 mr-1" />Cancel
-                      </Button>
-                      <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                        <Save className="h-3 w-3 mr-1" />{isSaving ? 'Saving...' : 'Save'}
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </SheetHeader>
+  const btnStyle = { background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(134,134,134,0.4)', color: TEXT };
+  const btnActiveStyle = { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.3)', color: TEXT };
 
-            <div className="py-6 space-y-4">
+  return (
+    <>
+      <div className="fixed inset-0 z-50" style={backdropStyle} onClick={() => !isEditing && onOpenChange(false)} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="pointer-events-auto relative w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex" style={glassStyle}>
+
+          {showFov && (
+            <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid rgb(134,134,134)', background: 'rgba(255,255,255,0.2)' }}>
+              <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>FOV Calculator</p>
+              <FovCalculator lensEfl={lens.efl} />
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold" style={{ color: TEXT }}>{lens.name}</h2>
+                <p className="text-sm mt-0.5" style={{ color: TEXT_MUTED }}>Detailed specifications for {lens.name}.</p>
+              </div>
+              <div className="flex items-center gap-2 ml-4 shrink-0 flex-wrap justify-end">
+                <Button size="sm" onClick={() => setShowFov(v => !v)} style={showFov ? btnActiveStyle : btnStyle}>
+                  <Calculator className="h-3 w-3 mr-1" />FOV
+                </Button>
+                {!isEditing ? (
+                  <>
+                    {isAdmin && <Button size="sm" onClick={() => setIsEditing(true)} style={btnStyle}><Pencil className="h-3 w-3 mr-1" />Edit</Button>}
+                    {isAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" style={{ background: 'rgba(255,80,80,0.15)', border: '1px solid rgba(200,50,50,0.3)', color: 'rgb(180,50,50)' }}><Trash2 className="h-3 w-3" /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {lens.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>This will permanently remove this lens. This cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">{isDeleting ? 'Deleting...' : 'Delete'}</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: TEXT_MUTED }}><X className="h-4 w-4" /></Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" onClick={handleCancel} disabled={isSaving} style={btnStyle}><X className="h-3 w-3 mr-1" />Cancel</Button>
+                    <Button size="sm" onClick={handleSave} disabled={isSaving} style={{ background: 'rgba(50,150,50,0.2)', border: '1px solid rgba(50,150,50,0.4)', color: 'rgb(30,120,30)' }}><Save className="h-3 w-3 mr-1" />{isSaving ? 'Saving...' : 'Save'}</Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {divider}
+
+            <div className="space-y-3 mt-3">
               {editableFields.map((field, i) => (
                 <div key={field.key}>
                   {isEditing ? (
                     <div className="space-y-1">
-                      <Label className="text-sm text-muted-foreground">
-                        {field.label}{field.unit ? ` (${field.unit})` : ''}
-                      </Label>
-                      <Input
-                        value={(editData[field.key] as string) ?? ''}
-                        onChange={e => setEditData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
+                      <Label className="text-sm" style={{ color: TEXT_MUTED }}>{field.label}{field.unit ? ` (${field.unit})` : ''}</Label>
+                      <Input value={(editData[field.key] as string) ?? ''} onChange={e => setEditData(prev => ({ ...prev, [field.key]: e.target.value }))} className="h-8 text-sm" style={inputStyle} />
                     </div>
                   ) : (
-                    <DetailItem
-                      label={field.label}
-                      value={formatValue(lens[field.key] as string, field.unit ? ` ${field.unit}` : '')}
-                    />
+                    <DetailItem label={field.label} value={formatValue(lens[field.key] as string, field.unit ? ` ${field.unit}` : '')} />
                   )}
-                  {[2, 6, 10, 12].includes(i) && !isEditing && <Separator className="mt-4" />}
+                  {[2, 6, 10, 12].includes(i) && !isEditing && divider}
                 </div>
               ))}
+            </div>
 
-              <Separator />
+            {divider}
 
-              {isFromPdf && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">AI Extraction Status</p>
-                  {lens.extractionStatus === 'extracted' && <Badge variant="secondary">Extracted Successfully</Badge>}
-                  {lens.extractionStatus === 'failed' && (
-                    <div>
-                      <Badge variant="destructive">Extraction Failed</Badge>
-                      {lens.debug_error && (
-                        <div className="mt-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
-                          <p className="font-mono whitespace-pre-wrap">{lens.debug_error}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {lens.extractionStatus !== 'extracted' && lens.extractionStatus !== 'failed' && (
-                    <p className="text-sm text-muted-foreground">Processing...</p>
-                  )}
-                </div>
-              )}
-
-              {isFromPdf && <Separator />}
-
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">PDF Document</p>
-                {hasPdfUrl ? (
-                  <Button asChild variant="outline" size="sm">
-                    <a href={lens.pdfUrl!} target="_blank" rel="noopener noreferrer">
-                      <FileText className="mr-2 h-4 w-4" />View
-                    </a>
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Not Available</p>
+            {isFromPdf && (
+              <div className="space-y-2 my-3">
+                <p className="text-sm" style={{ color: TEXT_MUTED }}>AI Extraction Status</p>
+                {lens.extractionStatus === 'extracted' && <Badge style={{ background: 'rgba(50,150,50,0.15)', color: 'rgb(30,120,30)', border: '1px solid rgba(50,150,50,0.3)' }}>Extracted Successfully</Badge>}
+                {lens.extractionStatus === 'failed' && (
+                  <div>
+                    <Badge style={{ background: 'rgba(200,50,50,0.15)', color: 'rgb(180,50,50)', border: '1px solid rgba(200,50,50,0.3)' }}>Extraction Failed</Badge>
+                    {lens.debug_error && <div className="mt-2 rounded-md p-3 text-xs font-mono" style={{ background: 'rgba(200,50,50,0.1)', border: '1px solid rgba(200,50,50,0.2)', color: 'rgb(180,50,50)' }}>{lens.debug_error}</div>}
+                  </div>
                 )}
               </div>
+            )}
 
-              {isAdmin && lens.sourcePath && (
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">AI Extraction</p>
-                  <Button variant="outline" size="sm" onClick={handleReExtract} disabled={isReExtracting}>
-                    <RefreshCw className={"h-3 w-3 mr-1 " + (isReExtracting ? "animate-spin" : "")} />
-                    {isReExtracting ? "Re-extracting..." : "Re-extract"}
-                  </Button>
-                </div>
-              )}
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm" style={{ color: TEXT_MUTED }}>PDF Document</p>
+              {hasPdfUrl ? (
+                <Button asChild size="sm" style={btnStyle}>
+                  <a href={lens.pdfUrl!} target="_blank" rel="noopener noreferrer"><FileText className="mr-2 h-4 w-4" />View</a>
+                </Button>
+              ) : <p className="text-sm" style={{ color: TEXT_MUTED }}>Not Available</p>}
             </div>
-          </div>
 
-          
+            {isAdmin && lens.sourcePath && (
+              <div className="flex justify-between items-center">
+                <p className="text-sm" style={{ color: TEXT_MUTED }}>AI Extraction</p>
+                <Button size="sm" onClick={handleReExtract} disabled={isReExtracting} style={btnStyle}>
+                  <RefreshCw className={"h-3 w-3 mr-1 " + (isReExtracting ? "animate-spin" : "")} />
+                  {isReExtracting ? "Re-extracting..." : "Re-extract"}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </>
   );
 }
 
 const DetailItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="flex justify-between items-center">
-    <p className="text-sm text-muted-foreground">{label}</p>
-    <p className="text-sm font-medium text-foreground">{value}</p>
+    <p className="text-sm" style={{ color: TEXT_MUTED }}>{label}</p>
+    <p className="text-sm font-medium" style={{ color: TEXT }}>{value}</p>
   </div>
 );
