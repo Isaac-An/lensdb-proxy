@@ -271,8 +271,15 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
         style={{ width: showFov ? '860px' : '480px', maxWidth: '95vw' }}
       >
         <div className={showFov ? 'flex gap-6 h-full' : ''}>
-          {/* Left: Specs */}
-          <div className={showFov ? 'flex-1 min-w-0 overflow-y-auto' : ''}>
+  {/* Left: FOV Calculator panel */}
+  {showFov && (
+    <div className="w-64 shrink-0 border-r pr-6 pt-2 overflow-y-auto">
+      <p className="text-sm font-semibold mb-4">FOV Calculator</p>
+      <FovCalculator lensEfl={lens.efl} />
+    </div>
+  )}
+  {/* Right: Specs */}
+  <div className={showFov ? 'flex-1 min-w-0 overflow-y-auto' : ''}>
             <SheetHeader className="text-left">
               <div className="flex items-start justify-between pr-8">
                 <div>
@@ -403,13 +410,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
             </div>
           </div>
 
-          {/* Right: FOV Calculator panel */}
-          {showFov && (
-            <div className="w-64 shrink-0 border-l pl-6 pt-2 overflow-y-auto">
-              <p className="text-sm font-semibold mb-4">FOV Calculator</p>
-              <FovCalculator lensEfl={lens.efl} />
-            </div>
-          )}
+          
         </div>
       </SheetContent>
     </Sheet>
