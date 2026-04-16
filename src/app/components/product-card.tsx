@@ -39,7 +39,7 @@ export function ProductCard({ lens, onSelectLens, isSelected, onToggleCompare, c
     <Card className={'flex flex-col transition-all hover:shadow-lg hover:-translate-y-1 ' + (isSelected ? 'ring-2 ring-primary' : '') + (isFailed ? ' border-destructive/50' : '')}>
       <CardHeader className='pb-2'>
         <div className='flex items-start justify-between gap-2'>
-          <CardTitle className='text-base font-bold truncate'>{lens.name}</CardTitle>
+          <CardTitle className='text-base font-bold leading-snug line-clamp-2'>{lens.name}</CardTitle>
           {onToggleCompare && (
             <div className='flex items-center gap-1.5 shrink-0' onClick={e => e.stopPropagation()}>
               <Checkbox

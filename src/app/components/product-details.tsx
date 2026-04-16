@@ -209,7 +209,7 @@ const editableFields: { key: keyof Lens; label: string; unit?: string }[] = [
   { key: 'fovH', label: 'Horizontal FOV', unit: '°' },
   { key: 'fovV', label: 'Vertical FOV', unit: '°' },
   { key: 'ttl', label: 'TTL', unit: 'mm' },
-  { key: 'tvDistortion', label: 'TV Distortion', unit: '%' },
+  { key: 'tvDistortion', label: 'Distortion', unit: '%' },
   { key: 'relativeIllumination', label: 'Relative Illumination', unit: '%' },
   { key: 'chiefRayAngle', label: 'Chief Ray Angle', unit: '°' },
   { key: 'mountType', label: 'Mount Type' },
@@ -297,9 +297,8 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
 
           <div className="flex-1 overflow-y-auto p-6">
             <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-semibold" style={{ color: TEXT }}>{lens.name}</h2>
-                <p className="text-sm mt-0.5" style={{ color: TEXT_MUTED }}>Detailed specifications for {lens.name}.</p>
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold break-words" style={{ color: TEXT }}>{lens.name}</h2>
               </div>
               <div className="flex items-center gap-2 ml-4 shrink-0 flex-wrap justify-end">
                 <Button size="sm" onClick={() => setShowFov(v => !v)} style={showFov ? btnActiveStyle : btnStyle}>

@@ -23,7 +23,7 @@ const fields: { key: keyof Lens; label: string; unit?: string }[] = [
   { key: 'fovH', label: 'FOV horizontal', unit: '°' },
   { key: 'fovV', label: 'FOV vertical', unit: '°' },
   { key: 'ttl', label: 'TTL', unit: 'mm' },
-  { key: 'tvDistortion', label: 'TV distortion', unit: '%' },
+  { key: 'tvDistortion', label: 'Distortion', unit: '%' },
   { key: 'relativeIllumination', label: 'Relative illumination', unit: '%' },
   { key: 'chiefRayAngle', label: 'Chief ray angle', unit: '°' },
   { key: 'mountType', label: 'Mount type' },
@@ -51,7 +51,10 @@ export function LensComparison({ lenses, open, onOpenChange }: LensComparisonPro
 
   const visibleFields = diffOnly
     ? fields.filter(f => isDifferent(lenses, f.key))
-    : fields;
+    : fields.filter(f => {
+        if (f.key === 'price') return lenses.some(l => l.price && String(l.price).trim() !== '');
+        return true;
+      });
 
   return (
     <>

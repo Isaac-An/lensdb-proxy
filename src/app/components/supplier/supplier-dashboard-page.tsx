@@ -328,7 +328,7 @@ export function SupplierDashboardPage() {
 
   return (
     <div className='flex h-screen bg-background'>
-      <div className='w-1/3 border-r'>
+      <div className='w-[220px] shrink-0 border-r'>
         <SupplierFilterSidebar
           filters={filters}
           setFilters={setFilters}
@@ -342,7 +342,7 @@ export function SupplierDashboardPage() {
           isLoading={isLoading || isFetchingAll}
         />
       </div>
-      <div className='w-2/3 flex flex-col'>
+      <div className='flex-1 flex flex-col min-w-0'>
         <SupplierHeader
           searchQuery={filters.searchQuery}
           onSearchChange={q => setFilters(prev => ({ ...prev, searchQuery: q }))}

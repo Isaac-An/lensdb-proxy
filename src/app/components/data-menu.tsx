@@ -106,7 +106,7 @@ export function DataMenu({ onAppend, onReplace, isDisabled, allLenses }: DataMen
   };
   const handleExport = () => {
     if (allLenses.length === 0) { toast({ variant: 'destructive', title: 'No lenses to export' }); return; }
-    const rows = allLenses.map(l => ({ 'Name':l.name,'Sensor Size':l.sensorSize,'EFL (mm)':l.efl,'Max Image Circle (mm)':l.maxImageCircle,'F. No.':l.fNo,'FOV Diagonal':l.fovD,'FOV Horizontal':l.fovH,'FOV Vertical':l.fovV,'TTL (mm)':l.ttl,'TV Distortion (%)':l.tvDistortion,'Relative Illumination (%)':l.relativeIllumination,'Chief Ray Angle':l.chiefRayAngle,'Mount Type':l.mountType,'Lens Structure':l.lensStructure,'Price':l.price,'PDF URL':l.pdfUrl }));
+    const rows = allLenses.map(l => ({ 'Name':l.name,'Sensor Size':l.sensorSize,'EFL (mm)':l.efl,'Max Image Circle (mm)':l.maxImageCircle,'F. No.':l.fNo,'FOV Diagonal':l.fovD,'FOV Horizontal':l.fovH,'FOV Vertical':l.fovV,'TTL (mm)':l.ttl,'Distortion (%)':l.tvDistortion,'Relative Illumination (%)':l.relativeIllumination,'Chief Ray Angle':l.chiefRayAngle,'Mount Type':l.mountType,'Lens Structure':l.lensStructure,'Price':l.price,'PDF URL':l.pdfUrl }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Lenses');
@@ -152,7 +152,7 @@ export function DataMenu({ onAppend, onReplace, isDisabled, allLenses }: DataMen
                             ['F. No.', existing.fNo],
                             ['FOV diagonal', existing.fovD ? existing.fovD + '°' : null],
                             ['TTL', existing.ttl ? existing.ttl + ' mm' : null],
-                            ['TV distortion', existing.tvDistortion ? existing.tvDistortion + '%' : null],
+                            ['Distortion', existing.tvDistortion ? existing.tvDistortion + '%' : null],
                             ['Mount type', existing.mountType],
                             ['Lens structure', existing.lensStructure],
                             ['Extraction status', existing.extractionStatus],

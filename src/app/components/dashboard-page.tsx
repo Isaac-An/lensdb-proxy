@@ -301,7 +301,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-background">
-      <div className="w-1/3 border-r">
+      <div className="w-[220px] shrink-0 border-r">
         <FilterSidebar
           filters={filters}
           setFilters={setFilters}
@@ -312,7 +312,7 @@ export function DashboardPage() {
           lensCount={filteredLenses.length}
         />
       </div>
-      <div className="w-2/3 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <AppHeader
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}

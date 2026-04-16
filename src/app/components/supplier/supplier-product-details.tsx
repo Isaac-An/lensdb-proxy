@@ -217,9 +217,8 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
           {/* Specs */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-semibold" style={{ color: 'rgb(76, 76, 76)' }}>{lens.name}</h2>
-                <p className="text-sm mt-0.5" style={{ color: 'rgba(76, 76, 76,1)' }}>Detailed specifications</p>
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold break-words" style={{ color: 'rgb(76, 76, 76)' }}>{lens.name}</h2>
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {lens.supplier && <Badge style={{ background: 'rgba(255, 255, 255, 0.49)', color: 'rgb(76, 76, 76)', border: '1px solid rgba(255,255,255,0.25)' }}>{lens.supplier}</Badge>}
                   {lens.countryOfOrigin && <Badge style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(76, 76, 76,1)', border: '1px solid rgba(255,255,255,0.2)' }}>{lens.countryOfOrigin}</Badge>}
@@ -249,7 +248,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
               <DetailItem label="Vertical FOV" value={formatValue(lens.fovV, '°')} />
               {divider}
               <DetailItem label="TTL" value={formatValue(lens.ttl, ' mm')} />
-              <DetailItem label="TV distortion" value={formatValue(lens.tvDistortion, '%')} />
+              <DetailItem label="Distortion" value={formatValue(lens.tvDistortion, '%')} />
               <DetailItem label="Relative illumination" value={formatValue(lens.relativeIllumination, '%')} />
               <DetailItem label="Chief ray angle" value={formatValue(lens.chiefRayAngle, '°')} />
               {divider}

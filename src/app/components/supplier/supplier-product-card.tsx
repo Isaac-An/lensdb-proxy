@@ -30,7 +30,7 @@ export function SupplierProductCard({ lens, onSelectLens, isSelected, onToggleCo
       <CardHeader className='pb-2'>
         <div className='flex items-start justify-between gap-2'>
           <div className='min-w-0'>
-            <CardTitle className='text-base font-bold truncate'>{lens.name}</CardTitle>
+            <CardTitle className='text-base font-bold leading-snug line-clamp-2'>{lens.name}</CardTitle>
             {lens.supplier && <Badge variant='secondary' className='mt-1 text-xs'>{lens.supplier}</Badge>}
             {lens.countryOfOrigin && <span className='ml-1 text-xs text-muted-foreground'>{lens.countryOfOrigin}</span>}
           </div>
