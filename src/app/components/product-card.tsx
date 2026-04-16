@@ -39,7 +39,9 @@ export function ProductCard({ lens, onSelectLens, isSelected, onToggleCompare, c
     <Card className={'flex flex-col transition-all hover:shadow-lg hover:-translate-y-1 ' + (isSelected ? 'ring-2 ring-primary' : '') + (isFailed ? ' border-destructive/50' : '')}>
       <CardHeader className='pb-2'>
         <div className='flex items-start justify-between gap-2'>
-          <CardTitle className='text-base font-bold leading-snug line-clamp-2'>{lens.name}</CardTitle>
+          <div className='min-w-0'>
+            <CardTitle className='text-base font-bold leading-snug line-clamp-2'>{lens.name}</CardTitle>
+          </div>
           {onToggleCompare && (
             <div className='flex items-center gap-1.5 shrink-0' onClick={e => e.stopPropagation()}>
               <Checkbox
@@ -56,9 +58,14 @@ export function ProductCard({ lens, onSelectLens, isSelected, onToggleCompare, c
       </CardHeader>
       <CardContent className='flex-1 p-4 pt-0'>
         <div className='text-sm text-muted-foreground space-y-1'>
-          <p><strong>EFL:</strong> {lens.efl}mm</p>
-          <p><strong>F. No.:</strong> {lens.fNo}</p>
-          <p><strong>Mount:</strong> {lens.mountType}</p>
+          {lens.sensorSize && <p><strong>Sensor:</strong> {lens.sensorSize}</p>}
+          <p><strong>EFL:</strong> {lens.efl || '-'}mm</p>
+          <p><strong>F. No.:</strong> {lens.fNo || '-'}</p>
+          {lens.maxImageCircle && <p><strong>Image Circle:</strong> {lens.maxImageCircle}mm</p>}
+          {lens.fovD && <p><strong>FOV:</strong> {lens.fovD}°</p>}
+          <p><strong>Mount:</strong> {lens.mountType || '-'}</p>
+          {lens.ttl && <p><strong>TTL:</strong> {lens.ttl}mm</p>}
+          {lens.price && <p><strong>Price:</strong> {lens.price}</p>}
         </div>
       </CardContent>
       <CardFooter className='p-4 pt-0'>

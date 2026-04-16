@@ -328,7 +328,7 @@ export function SupplierDashboardPage() {
 
   return (
     <div className='flex h-screen bg-background'>
-      <div className='w-[220px] shrink-0 border-r'>
+      <div className='w-[350px] shrink-0 border-r'>
         <SupplierFilterSidebar
           filters={filters}
           setFilters={setFilters}

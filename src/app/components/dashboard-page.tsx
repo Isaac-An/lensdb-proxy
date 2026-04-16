@@ -301,7 +301,7 @@ export function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-background">
-      <div className="w-[220px] shrink-0 border-r">
+      <div className="w-[350px] shrink-0 border-r">
         <FilterSidebar
           filters={filters}
           setFilters={setFilters}
