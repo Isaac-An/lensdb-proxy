@@ -309,20 +309,27 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   const handleCancel = () => { setEditData({ ...lens }); setIsEditing(false); };
 
   const handleReExtract = async () => {
-    if (!lens.pdfUrl || !lens.sourcePath) return;
-    setIsReExtracting(true);
-    try {
-      const { getIdToken, getAuth } = await import('firebase/auth');
-      const token = await getIdToken(getAuth().currentUser!);
-      const blob = await (await fetch(lens.pdfUrl)).blob();
-      await fetch(`https://firebasestorage.googleapis.com/v0/b/studio-3861763439-b3374.firebasestorage.app/o?name=${encodeURIComponent(lens.sourcePath)}&uploadType=media`, {
-        method: 'POST', headers: { 'Content-Type': 'application/pdf', 'Authorization': 'Firebase ' + token }, body: blob,
-      });
-      toast({ title: 'Re-extraction started', description: 'The lens data will update shortly.' });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Re-extraction failed', description: err.message });
-    } finally { setIsReExtracting(false); }
-  };
+  if (!lens.pdfUrl || !lens.sourcePath) return;
+  setIsReExtracting(true);
+  try {
+    // Fetch the PDF
+    const response = await fetch(lens.pdfUrl);
+    if (!response.ok) throw new Error('Failed to download PDF');
+    const blob = await response.blob();
+
+    // Re-upload using Firebase Storage SDK
+    const { getStorage, ref, uploadBytes } = await import('firebase/storage');
+    const storage = getStorage();
+    const storageRef = ref(storage, lens.sourcePath);
+    await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
+
+    toast({ title: 'Re-extraction started', description: 'The lens data will update shortly.' });
+  } catch (err: any) {
+    toast({ variant: 'destructive', title: 'Re-extraction failed', description: err.message });
+  } finally {
+    setIsReExtracting(false);
+  }
+};
 
   const handleDelete = async () => {
     if (!firestore || !lens.id) return;
