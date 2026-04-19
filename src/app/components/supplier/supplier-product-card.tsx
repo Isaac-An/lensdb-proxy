@@ -53,7 +53,7 @@ export function SupplierProductCard({ lens, onSelectLens, isSelected, onToggleCo
           <p><strong>EFL:</strong> {lens.efl || '-'}mm</p>
           <p><strong>F. No.:</strong> {lens.fNo || '-'}</p>
           {lens.maxImageCircle && <p><strong>Image Circle:</strong> {lens.maxImageCircle}mm</p>}
-          {lens.fovD && <p><strong>FOV:</strong> {lens.fovD}°</p>}
+          {lens.fovH ? <p><strong>HFOV:</strong> {lens.fovH}°</p> : lens.fovD ? <p><strong>DFOV:</strong> {lens.fovD}°</p> : null}
           <p><strong>Mount:</strong> {lens.mountType || '-'}</p>
           {lens.ttl && <p><strong>TTL:</strong> {lens.ttl}mm</p>}
           {lens.price && <p><strong>Price:</strong> {lens.price}</p>}

@@ -29,6 +29,9 @@ function StatusBadge({ status }: { status?: string }) {
   if (status === 'needs_review') return (
     <Badge variant='outline' className='text-xs text-amber-600 border-amber-400'>Needs review</Badge>
   );
+  if (status === 'needs_split_review') return (
+    <Badge variant='outline' className='text-xs' style={{ color: 'rgb(99,60,180)', borderColor: 'rgb(99,60,180)' }}>Multi-sensor — review split</Badge>
+  );
   return null;
 }
 
@@ -62,14 +65,21 @@ export function ProductCard({ lens, onSelectLens, isSelected, onToggleCompare, c
           <p><strong>EFL:</strong> {lens.efl || '-'}mm</p>
           <p><strong>F. No.:</strong> {lens.fNo || '-'}</p>
           {lens.maxImageCircle && <p><strong>Image Circle:</strong> {lens.maxImageCircle}mm</p>}
-          {lens.fovD && <p><strong>FOV:</strong> {lens.fovD}°</p>}
+          {lens.fovH ? <p><strong>HFOV:</strong> {lens.fovH}°</p> : lens.fovD ? <p><strong>DFOV:</strong> {lens.fovD}°</p> : null}
           <p><strong>Mount:</strong> {lens.mountType || '-'}</p>
           {lens.ttl && <p><strong>TTL:</strong> {lens.ttl}mm</p>}
           {lens.price && <p><strong>Price:</strong> {lens.price}</p>}
         </div>
       </CardContent>
       <CardFooter className='p-4 pt-0'>
-        <Button variant='outline' className='w-full hover:bg-primary hover:text-primary-foreground hover:border-primary' onClick={() => onSelectLens(lens)}>View Details</Button>
+        <Button
+          variant='outline'
+          className='w-full hover:bg-primary hover:text-primary-foreground hover:border-primary'
+          onClick={() => onSelectLens(lens)}
+          style={status === 'needs_split_review' ? { borderColor: 'rgb(99,60,180)', color: 'rgb(99,60,180)' } : {}}
+        >
+          {status === 'needs_split_review' ? 'Review Split' : 'View Details'}
+        </Button>
       </CardFooter>
     </Card>
   );

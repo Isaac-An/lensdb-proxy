@@ -87,24 +87,32 @@ export const onLensPdfUploaded = onObjectFinalized(
       const apiKey = process.env.GEMINI_API_KEY;
       logger.info("Gemini API key present", { hasKey: !!apiKey, keyLength: apiKey?.length });
 
-      const prompt = `You are a precise optical lens data extractor. Extract ALL the following fields from this lens datasheet text. Return ONLY a valid JSON object with no markdown, no code fences, no explanation. Just the raw JSON:
+      const prompt = `You are a precise optical lens data extractor. This datasheet may describe ONE lens or MULTIPLE lenses for different sensor sizes.
+
+Extract ALL lenses from this datasheet. Return ONLY a valid JSON object with no markdown, no code fences, no explanation. Just the raw JSON:
 {
-  "name": "product name/model",
-  "sensorSize": "sensor size string",
-  "efl": "focal length in mm as number string",
-  "maxImageCircle": "max image circle in mm",
-  "fNo": "f-number",
-  "fovD": "diagonal FOV in degrees",
-  "fovH": "horizontal FOV in degrees",
-  "fovV": "vertical FOV in degrees",
-  "ttl": "total track length in mm",
-  "tvDistortion": "TV distortion percentage",
-  "relativeIllumination": "relative illumination percentage",
-  "chiefRayAngle": "chief ray angle in degrees",
-  "mountType": "mount type",
-  "lensStructure": "lens structure",
-  "price": null
+  "lenses": [
+    {
+      "name": "product name/model",
+      "sensorSize": "sensor size string e.g. 1/2.8\"",
+      "efl": "focal length in mm as number string",
+      "maxImageCircle": "max image circle in mm",
+      "fNo": "f-number",
+      "fovD": "diagonal FOV in degrees",
+      "fovH": "horizontal FOV in degrees",
+      "fovV": "vertical FOV in degrees",
+      "ttl": "total track length in mm",
+      "tvDistortion": "TV distortion percentage",
+      "relativeIllumination": "relative illumination percentage",
+      "chiefRayAngle": "chief ray angle in degrees",
+      "mountType": "mount type",
+      "lensStructure": "lens structure",
+      "price": null
+    }
+  ]
 }
+
+If the datasheet covers multiple sensor sizes, include one entry per sensor size in the lenses array. If it covers only one lens, the array will have one element.
 
 Datasheet text:
 ${relevantText}`;
@@ -132,20 +140,40 @@ ${relevantText}`;
       if (!jsonMatch) throw new Error(`No JSON in AI response. Raw: ${rawText.slice(0, 300)}`);
 
       const parsed = JSON.parse(jsonMatch[0]);
-      const lensData = {
-        ...parsed,
-        id: safeId,
-        pdfUrl,
-        sourcePath: filePath,
-        extractionStatus: "extracted",
-        updatedAt: new Date(),
-        createdAt: new Date(),
-        debug_pdfText_sample: fullText.slice(0, 500),
-        debug_aiRaw: rawText.slice(0, 1000),
-      };
 
-      await docRef.set(lensData, { merge: true });
-      logger.info("Lens extracted successfully", { filePath, name: parsed.name });
+      // Multi-lens: array of lenses
+      const lensArray: any[] = Array.isArray(parsed.lenses) ? parsed.lenses : [parsed];
+
+      if (lensArray.length > 1) {
+        // Write staging doc for review
+        await docRef.set({
+          id: safeId,
+          pdfUrl,
+          sourcePath: filePath,
+          extractionStatus: "needs_split_review",
+          stagedLenses: lensArray,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          debug_pdfText_sample: fullText.slice(0, 500),
+          debug_aiRaw: rawText.slice(0, 1000),
+        }, { merge: true });
+        logger.info("Multi-sensor PDF staged for review", { filePath, count: lensArray.length });
+      } else {
+        // Single lens — existing flow
+        const lensData = {
+          ...lensArray[0],
+          id: safeId,
+          pdfUrl,
+          sourcePath: filePath,
+          extractionStatus: "extracted",
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          debug_pdfText_sample: fullText.slice(0, 500),
+          debug_aiRaw: rawText.slice(0, 1000),
+        };
+        await docRef.set(lensData, { merge: true });
+        logger.info("Lens extracted successfully", { filePath, name: lensArray[0].name });
+      }
 
     } catch (err: any) {
       logger.error("Extraction failed", { filePath, error: err.message });

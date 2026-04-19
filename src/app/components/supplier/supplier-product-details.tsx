@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useMemo } from 'react';
-import type { SupplierLens } from '@/app/lib/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { SupplierLens, Lens } from '@/app/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useFirebase } from '@/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { LensComparison } from '../lens-comparison';
 
 type ProductDetailsProps = {
   lens: SupplierLens | null;
@@ -198,6 +201,59 @@ const formatValue = (value: string | number | undefined | null, unit: string = '
 
 export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
   const [showFov, setShowFov] = useState(false);
+  const [showSimilar, setShowSimilar] = useState(false);
+  const [compareWith, setCompareWith] = useState<Lens | null>(null);
+  const [similarBy, setSimilarBy] = useState<'sensor'|'efl'|'fov'|'imageCircle'>('sensor');
+  const [allLensesPool, setAllLensesPool] = useState<Lens[]>([]);
+  const [isLoadingPool, setIsLoadingPool] = useState(false);
+  const { firestore } = useFirebase();
+  useEffect(() => {
+    setShowSimilar(false);
+  }, [lens]);
+
+  useEffect(() => {
+    if (!showSimilar || allLensesPool.length > 0 || !firestore) return;
+    setIsLoadingPool(true);
+    Promise.all([
+      getDocs(collection(firestore, 'products')),
+      getDocs(collection(firestore, 'supplier_lenses')),
+    ]).then(([prodSnap, supSnap]) => {
+      const all: Lens[] = [
+        ...prodSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Lens)),
+        ...supSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Lens)),
+      ];
+      setAllLensesPool(all);
+    }).finally(() => setIsLoadingPool(false));
+  }, [showSimilar, firestore]);
+
+  const similarLenses = useMemo(() => {
+    if (!lens || allLensesPool.length === 0) return [];
+    const pool = allLensesPool.filter(l => l.id !== lens.id);
+    if (similarBy === 'sensor') {
+      if (!lens.sensorSize) return [];
+      return pool.filter(l => l.sensorSize === lens.sensorSize).slice(0, 5);
+    }
+    if (similarBy === 'efl') {
+      const efl = parseFloat(lens.efl || '');
+      if (isNaN(efl)) return [];
+      return pool.filter(l => { const v = parseFloat(l.efl || ''); return !isNaN(v) && Math.abs(v - efl) / efl <= 0.2; })
+        .sort((a,b) => Math.abs(parseFloat(a.efl||'0')-efl) - Math.abs(parseFloat(b.efl||'0')-efl)).slice(0, 5);
+    }
+    if (similarBy === 'fov') {
+      const fov = parseFloat(lens.fovD || '');
+      if (isNaN(fov)) return [];
+      return pool.filter(l => { const v = parseFloat(l.fovD || ''); return !isNaN(v) && Math.abs(v - fov) <= 15; })
+        .sort((a,b) => Math.abs(parseFloat(a.fovD||'0')-fov) - Math.abs(parseFloat(b.fovD||'0')-fov)).slice(0, 5);
+    }
+    if (similarBy === 'imageCircle') {
+      const ic = parseFloat(lens.maxImageCircle || '');
+      if (isNaN(ic)) return [];
+      return pool.filter(l => { const v = parseFloat(l.maxImageCircle || ''); return !isNaN(v) && Math.abs(v - ic) <= 1; })
+        .sort((a,b) => Math.abs(parseFloat(a.maxImageCircle||'0')-ic) - Math.abs(parseFloat(b.maxImageCircle||'0')-ic)).slice(0, 5);
+    }
+    return [];
+  }, [lens, allLensesPool, similarBy]);
+
   if (!lens || !open) return null;
 
   return (
@@ -256,9 +312,73 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
               <DetailItem label="Lens structure" value={lens.lensStructure} />
               {lens.price && <>{divider}<DetailItem label="Price" value={lens.price} /></>}
             </div>
+
+            {/* divider */}
+            <div style={{ height: '1px', background: 'rgba(134,134,134,0.25)', margin: '12px 0' }} />
+
+            {/* Similar lenses */}
+            <div>
+              <button
+                className="flex items-center justify-between w-full text-left py-2"
+                onClick={() => setShowSimilar(v => !v)}
+              >
+                <p className="text-sm font-medium" style={{ color: 'rgb(76,76,76)' }}>Similar lenses</p>
+                <span className="text-xs" style={{ color: 'rgba(76,76,76,0.5)' }}>{showSimilar ? '▲' : '▼'}</span>
+              </button>
+              {showSimilar && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex gap-1 flex-wrap">
+                    {(['sensor','efl','fov','imageCircle'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => setSimilarBy(opt)}
+                        className="px-2 py-0.5 rounded-full text-xs border transition-colors"
+                        style={similarBy === opt
+                          ? { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.4)', color: 'rgb(76,76,76)' }
+                          : { background: 'transparent', border: '1px solid rgba(134,134,134,0.3)', color: 'rgba(76,76,76,0.5)' }
+                        }
+                      >
+                        {opt === 'sensor' ? 'Sensor' : opt === 'efl' ? 'EFL ±20%' : opt === 'fov' ? 'FOV ±15°' : 'Image Circle ±1mm'}
+                      </button>
+                    ))}
+                  </div>
+                  {isLoadingPool ? (
+                    <p className="text-xs" style={{ color: 'rgba(76,76,76,0.5)' }}>Loading...</p>
+                  ) : similarLenses.length === 0 ? (
+                    <p className="text-xs" style={{ color: 'rgba(76,76,76,0.5)' }}>No similar lenses found.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {similarLenses.map(sl => (
+                        <button
+                          key={sl.id}
+                          onClick={() => setCompareWith(sl)}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors hover:bg-black/5"
+                          style={{ border: '1px solid rgba(134,134,134,0.2)' }}
+                        >
+                          <span className="text-xs font-medium line-clamp-1" style={{ color: 'rgb(76,76,76)' }}>{sl.name}</span>
+                          <span className="text-xs ml-2 shrink-0" style={{ color: 'rgba(76,76,76,0.5)' }}>
+                            {similarBy === 'sensor' ? sl.sensorSize
+                              : similarBy === 'efl' ? (sl.efl ? sl.efl + 'mm' : '—')
+                              : similarBy === 'fov' ? (sl.fovD ? sl.fovD + '°' : '—')
+                              : (sl.maxImageCircle ? sl.maxImageCircle + 'mm' : '—')}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
+      {compareWith && lens && (
+        <LensComparison
+          lenses={[lens, compareWith]}
+          open={true}
+          onOpenChange={(o) => { if (!o) setCompareWith(null); }}
+        />
+      )}
     </>
   );
 }

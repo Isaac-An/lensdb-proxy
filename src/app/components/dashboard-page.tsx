@@ -6,6 +6,7 @@ import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
 import { ProductList } from './product-list';
 import { ProductDetails } from './product-details';
+import { SplitReviewDialog } from './split-review-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { DataMenu } from './data-menu';
 import { useCollection } from '@/firebase/firestore/use-collection';
@@ -89,6 +90,8 @@ export function DashboardPage() {
 
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
+  const [splitLens, setSplitLens] = useState<Lens | null>(null);
+  const [isSplitOpen, setSplitOpen] = useState(false);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
   const [lensesToUpdate, setLensesToUpdate] = useState<{current: Lens, updated: Lens}[]>([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
@@ -275,6 +278,11 @@ export function DashboardPage() {
   };
 
   const handleSelectLens = (lens: Lens) => {
+    if (lens.extractionStatus === 'needs_split_review') {
+      setSplitLens(lens);
+      setSplitOpen(true);
+      return;
+    }
     setSelectedLens(lens);
     setDetailsOpen(true);
   };
@@ -335,6 +343,13 @@ export function DashboardPage() {
           open={isDetailsOpen}
           onOpenChange={setDetailsOpen}
           isAdmin={isAdmin}
+        />
+      )}
+      {splitLens && (
+        <SplitReviewDialog
+          stagingLens={splitLens}
+          open={isSplitOpen}
+          onOpenChange={(o) => { setSplitOpen(o); if (!o) setSplitLens(null); }}
         />
       )}
       <UpdateConfirmationDialog

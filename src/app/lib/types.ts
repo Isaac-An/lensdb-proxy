@@ -19,7 +19,8 @@ export interface Lens {
   pdfUrl: string | null;
   countryOfOrigin?: string | null;
   sourcePath?: string;
-  extractionStatus?: 'extracted' | 'failed' | 'needs_review';
+  extractionStatus?: 'extracted' | 'failed' | 'needs_review' | 'needs_split_review';
+  stagedLenses?: any[];
   debug_pdfText_sample?: string;
   debug_aiRaw?: string;
   debug_parseResult?: Record<string, any>;
