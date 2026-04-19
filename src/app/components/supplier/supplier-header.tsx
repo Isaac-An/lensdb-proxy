@@ -4,13 +4,12 @@ import { Search, FileInput } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useFirebase } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, query, where } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import type { SupplierLens } from '@/app/lib/types';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -50,6 +49,7 @@ const keyMap: Record<string, string> = {
   brand: 'supplier', manufacturer: 'supplier',
   countryoforigin: 'countryOfOrigin', origin: 'countryOfOrigin',
   country: 'countryOfOrigin', madein: 'countryOfOrigin',
+  industrial: 'industrial',
 };
 
 export function SupplierHeader({
@@ -106,37 +106,68 @@ export function SupplierHeader({
     reader.readAsArrayBuffer(file);
   };
 
-  const handleImport = async (mode: 'replace' | 'append') => {
+  const handleImport = async () => {
     if (!firestore || !parsedLenses) return;
     setConfirmOpen(false);
     setIsImporting(true);
-    toast({ title: 'Importing...', description: 'Please wait.' });
+    toast({ title: 'Importing...', description: 'Checking for changes, please wait.' });
 
     try {
       const col = collection(firestore, 'supplier_lenses');
 
-      if (mode === 'replace') {
-        // Delete all existing docs first
-        const existing = await getDocs(col);
-        const deleteBatch = writeBatch(firestore);
-        existing.forEach(d => deleteBatch.delete(d.ref));
-        await deleteBatch.commit();
-      }
+      // Fetch all existing docs, index by name
+      const existingSnap = await getDocs(col);
+      const existingByName = new Map<string, { id: string; data: any }>();
+      existingSnap.docs.forEach(d => {
+        const n = (d.data().name || '').trim();
+        if (n) existingByName.set(n, { id: d.id, data: d.data() });
+      });
 
-      // Write in batches of 500
+      const IGNORE = new Set(['updatedAt', 'createdAt', 'syncedFromSheet', 'id', 'pdfUrl', 'price', 'extractionStatus', 'sourcePath']);
+      let inserted = 0, updated = 0, skipped = 0;
+
       const BATCH_SIZE = 500;
       for (let i = 0; i < parsedLenses.length; i += BATCH_SIZE) {
+        const chunk = parsedLenses.slice(i, i + BATCH_SIZE);
         const batch = writeBatch(firestore);
-        parsedLenses.slice(i, i + BATCH_SIZE).forEach(lens => {
-          const ref = doc(col);
-          batch.set(ref, { ...lens, id: ref.id });
-        });
+
+        for (const lens of chunk) {
+          const name = (lens.name || '').trim();
+          if (!name) continue;
+
+          const existing = existingByName.get(name);
+
+          if (!existing) {
+            // New lens — insert
+            const ref = doc(col);
+            batch.set(ref, { ...lens, id: ref.id });
+            inserted++;
+          } else {
+            // Check for differences (ignore metadata fields)
+            const csvKeys = Object.keys(lens).filter(k => !IGNORE.has(k));
+            const hasDiff = csvKeys.some(k => {
+              const csvVal = String((lens as any)[k] ?? '').trim();
+              const fsVal = String(existing.data[k] ?? '').trim();
+              return csvVal !== '' && csvVal !== fsVal;
+            });
+
+            if (hasDiff) {
+              // Update existing doc, preserve metadata
+              const ref = doc(col, existing.id);
+              batch.set(ref, { ...existing.data, ...lens, id: existing.id }, { merge: true });
+              updated++;
+            } else {
+              skipped++;
+            }
+          }
+        }
+
         await batch.commit();
       }
 
       toast({
-        title: 'Import Successful',
-        description: `${parsedLenses.length} lenses imported.`,
+        title: 'Import Complete',
+        description: `✅ ${inserted} inserted · 🔄 ${updated} updated · ⏭ ${skipped} unchanged`,
       });
       onImportComplete?.();
     } catch (err: any) {
@@ -196,14 +227,12 @@ export function SupplierHeader({
           <AlertDialogHeader>
             <AlertDialogTitle>Import {parsedLenses?.length} lenses</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>Replace</strong> — deletes all existing supplier lenses and imports fresh.<br />
-              <strong>Append</strong> — adds new lenses without deleting existing ones.
+              New lenses will be inserted. Existing lenses with changed data will be updated. Unchanged lenses will be skipped. No data will be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button variant="outline" onClick={() => handleImport('append')}>Append</Button>
-            <AlertDialogAction onClick={() => handleImport('replace')}>Replace All</AlertDialogAction>
+            <Button onClick={handleImport}>Import</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
