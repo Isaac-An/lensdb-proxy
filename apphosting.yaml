@@ -30,3 +30,5 @@ env:
       - RUNTIME
   - variable: APP_STORAGE_BUCKET
     secret: storageBucket
+  - variable: SHEETS_SYNC_SECRET
+    secret: SHEETS_SYNC_SECRET

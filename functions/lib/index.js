@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onLensPdfUploaded = void 0;
+exports.onSheetSync = exports.onLensPdfUploaded = void 0;
 const storage_1 = require("firebase-functions/v2/storage");
+const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 const firebase_functions_1 = require("firebase-functions");
 const app_1 = require("firebase-admin/app");
@@ -167,5 +168,68 @@ ${relevantText}`;
         firebase_functions_1.logger.error("Extraction failed", { filePath, error: err.message });
         await docRef.set({ extractionStatus: "failed", debug_error: err.message, updatedAt: new Date() }, { merge: true });
     }
+});
+// ─── Sheets → Firestore Sync ───────────────────────────────────────────────
+exports.onSheetSync = (0, https_1.onRequest)({ secrets: ["SHEETS_SYNC_SECRET"], timeoutSeconds: 540, memory: "2GiB" }, async (req, res) => {
+    initAdmin();
+    const secret = process.env.SHEETS_SYNC_SECRET;
+    const authHeader = req.headers["x-sync-secret"] || "";
+    if (!secret || authHeader !== secret) {
+        firebase_functions_1.logger.warn("onSheetSync: unauthorized request");
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+    }
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+        res.status(400).json({ error: "Missing or empty rows array" });
+        return;
+    }
+    const db = (0, firestore_1.getFirestore)();
+    const collection = db.collection("supplier_lenses");
+    // 1. Fetch all existing docs (name → id)
+    const existingSnap = await collection.select("name").get();
+    const existingByName = new Map();
+    existingSnap.docs.forEach(doc => {
+        const n = (doc.data().name || "").trim();
+        if (n)
+            existingByName.set(n, doc.id);
+    });
+    // 2. Incoming names set
+    const incomingNames = new Set(rows.map(r => (r.name || "").trim()).filter(Boolean));
+    // 3. Delete orphans (in sheet no longer)
+    const toDelete = existingSnap.docs.filter(doc => {
+        const n = (doc.data().name || "").trim();
+        return n && !incomingNames.has(n);
+    });
+    for (let i = 0; i < toDelete.length; i += 500) {
+        const batch = db.batch();
+        toDelete.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+    }
+    // 4. Upsert all rows
+    let upserted = 0;
+    for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        const batch = db.batch();
+        for (const row of chunk) {
+            const name = (row.name || "").trim();
+            if (!name)
+                continue;
+            const existingId = existingByName.get(name);
+            const docRef = existingId ? collection.doc(existingId) : collection.doc();
+            batch.set(docRef, Object.assign(Object.assign(Object.assign({}, row), { syncedFromSheet: true, updatedAt: firestore_1.FieldValue.serverTimestamp() }), (existingId ? {} : { createdAt: firestore_1.FieldValue.serverTimestamp() })), { merge: true });
+            upserted++;
+        }
+        await batch.commit();
+    }
+    // 5. Clear stale sync_conflicts
+    const conflictsSnap = await db.collection("sync_conflicts").select().get();
+    for (let i = 0; i < conflictsSnap.docs.length; i += 500) {
+        const batch = db.batch();
+        conflictsSnap.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+    }
+    firebase_functions_1.logger.info("onSheetSync: complete", { upserted, deleted: toDelete.length });
+    res.status(200).json({ ok: true, upserted, deleted: toDelete.length, errors: 0 });
 });
 //# sourceMappingURL=index.js.map
