@@ -150,7 +150,7 @@ function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
     };
   }, [dims, eflNum]);
 
-  const inputStyle = { background: 'rgba(255, 255, 255, 0.4)', border: '1px solid rgba(255,255,255,0.25)', color: 'rgba(76, 76, 76, 1)' };
+  const inputStyle = { background: 'white', border: '1px solid #d1d5db', color: 'rgba(76, 76, 76, 1)' };
 
   return (
     <div className="space-y-4">
