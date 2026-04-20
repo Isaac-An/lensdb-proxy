@@ -5,12 +5,12 @@ import type { Lens } from '@/app/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Pencil, X, Save, Trash2, RefreshCw, Calculator } from 'lucide-react';
+import { FileText, Pencil, X, Save, Trash2, RefreshCw, Calculator, StickyNote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirebase } from '@/firebase';
 import { LensComparison } from './lens-comparison';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { doc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -181,7 +181,7 @@ function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
         {!eflOverride && lensEfl && <p className="text-xs" style={{ color: TEXT_MUTED }}>Using lens EFL: {lensEfl}mm</p>}
       </div>
       {results ? (
-        <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)' }}>
+        <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(249,250,251,1)', border: '1px solid #e5e7eb' }}>
           {[['Horizontal', results.horizontal], ['Vertical', results.vertical], ['Diagonal', results.diagonal]].map(([label, val]) => (
             <div key={label as string} className="flex justify-between text-xs">
               <span style={{ color: TEXT_MUTED }}>{label}</span>
@@ -218,6 +218,8 @@ const editableFields: { key: keyof Lens; label: string; unit?: string }[] = [
   { key: 'price', label: 'Price' },
 ];
 
+type Note = { id: string; text: string; timestamp: number };
+
 export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: ProductDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Lens>>({});
@@ -225,6 +227,11 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [showFov, setShowFov] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [noteInput, setNoteInput] = useState('');
+  const [isLoadingNotes, setIsLoadingNotes] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const [showSimilar, setShowSimilar] = useState(false);
   const [compareWith, setCompareWith] = useState<Lens | null>(null);
   const [similarBy, setSimilarBy] = useState<'sensor'|'efl'|'fov'|'imageCircle'>('sensor');
@@ -237,6 +244,9 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     if (lens) setEditData({ ...lens });
     setIsEditing(false);
     setShowFov(false);
+    setShowNotes(false);
+    setNotes([]);
+    setNoteInput('');
     setShowSimilar(false);
   }, [lens]);
 
@@ -254,6 +264,33 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
       setAllLensesPool(all);
     }).finally(() => setIsLoadingPool(false));
   }, [showSimilar, firestore]);
+
+  useEffect(() => {
+    if (!showNotes || !firestore || !lens?.id) return;
+    setIsLoadingNotes(true);
+    getDocs(collection(firestore, 'products', lens.id, 'notes'))
+      .then(snap => {
+        const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as Note));
+        loaded.sort((a, b) => b.timestamp - a.timestamp);
+        setNotes(loaded);
+      })
+      .finally(() => setIsLoadingNotes(false));
+  }, [showNotes, lens?.id, firestore]);
+
+  const handleAddNote = async () => {
+    if (!noteInput.trim() || !firestore || !lens?.id) return;
+    setIsSavingNote(true);
+    try {
+      const ref = await addDoc(
+        collection(firestore, 'products', lens.id, 'notes'),
+        { text: noteInput.trim(), timestamp: Date.now(), createdAt: serverTimestamp() }
+      );
+      setNotes(prev => [{ id: ref.id, text: noteInput.trim(), timestamp: Date.now() }, ...prev]);
+      setNoteInput('');
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
 
   const similarLenses = useMemo(() => {
     if (!lens || allLensesPool.length === 0) return [];
@@ -293,6 +330,10 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
 
   const hasPdfUrl = lens.pdfUrl && lens.pdfUrl.startsWith('https://');
   const isFromPdf = !!lens.sourcePath;
+  const sidePanelOpen = showFov || showNotes;
+
+  const btnStyle = { background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(134,134,134,0.4)', color: TEXT };
+  const btnActiveStyle = { background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.5)', color: 'rgba(59,130,246,1)' };
 
   const handleSave = async () => {
     if (!firestore || !lens.id) return;
@@ -309,27 +350,23 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   const handleCancel = () => { setEditData({ ...lens }); setIsEditing(false); };
 
   const handleReExtract = async () => {
-  if (!lens.pdfUrl || !lens.sourcePath) return;
-  setIsReExtracting(true);
-  try {
-    // Fetch the PDF
-    const response = await fetch(lens.pdfUrl);
-    if (!response.ok) throw new Error('Failed to download PDF');
-    const blob = await response.blob();
-
-    // Re-upload using Firebase Storage SDK
-    const { getStorage, ref, uploadBytes } = await import('firebase/storage');
-    const storage = getStorage();
-    const storageRef = ref(storage, lens.sourcePath);
-    await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
-
-    toast({ title: 'Re-extraction started', description: 'The lens data will update shortly.' });
-  } catch (err: any) {
-    toast({ variant: 'destructive', title: 'Re-extraction failed', description: err.message });
-  } finally {
-    setIsReExtracting(false);
-  }
-};
+    if (!lens.pdfUrl || !lens.sourcePath) return;
+    setIsReExtracting(true);
+    try {
+      const response = await fetch(lens.pdfUrl);
+      if (!response.ok) throw new Error('Failed to download PDF');
+      const blob = await response.blob();
+      const { getStorage, ref, uploadBytes } = await import('firebase/storage');
+      const storage = getStorage();
+      const storageRef = ref(storage, lens.sourcePath);
+      await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
+      toast({ title: 'Re-extraction started', description: 'The lens data will update shortly.' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Re-extraction failed', description: err.message });
+    } finally {
+      setIsReExtracting(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!firestore || !lens.id) return;
@@ -342,30 +379,70 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     } finally { setIsDeleting(false); }
   };
 
-  const btnStyle = { background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(134,134,134,0.4)', color: TEXT };
-  const btnActiveStyle = { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.3)', color: TEXT };
-
   return (
     <>
       <div className="fixed inset-0 z-50" style={backdropStyle} onClick={() => !isEditing && onOpenChange(false)} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto relative w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex" style={glassStyle}>
+        <div
+          className="pointer-events-auto relative w-full max-h-[90vh] rounded-3xl overflow-hidden flex transition-all duration-300"
+          style={{ ...glassStyle, maxWidth: sidePanelOpen ? '56rem' : '42rem' }}
+        >
 
+          {/* FOV Calculator panel */}
           {showFov && (
-            <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid rgb(134,134,134)', background: 'rgba(255,255,255,0.2)' }}>
+            <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
               <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>FOV Calculator</p>
               <FovCalculator lensEfl={lens.efl} />
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="min-w-0">
-                <h2 className="text-xl font-semibold break-words" style={{ color: TEXT }}>{lens.name}</h2>
+          {/* Notes panel */}
+          {showNotes && (
+            <div className="w-64 shrink-0 overflow-y-auto p-6 flex flex-col gap-3" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
+              <p className="text-sm font-semibold" style={{ color: TEXT }}>Notes</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a note..."
+                  value={noteInput}
+                  onChange={e => setNoteInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddNote()}
+                  className="h-8 text-xs flex-1"
+                  style={inputStyle}
+                />
+                <Button size="sm" onClick={handleAddNote} disabled={isSavingNote || !noteInput.trim()} style={btnStyle}>+</Button>
               </div>
-              <div className="flex items-center gap-2 ml-4 shrink-0 flex-wrap justify-end">
-                <Button size="sm" onClick={() => setShowFov(v => !v)} style={showFov ? btnActiveStyle : btnStyle}>
+              {isLoadingNotes ? (
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>Loading...</p>
+              ) : notes.length === 0 ? (
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>No notes yet. Press Enter to add.</p>
+              ) : (
+                <div className="space-y-2">
+                  {notes.map(n => (
+                    <div key={n.id} className="rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
+                      <p className="text-xs" style={{ color: TEXT }}>{n.text}</p>
+                      <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>{new Date(n.timestamp).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Main content */}
+          <div className="flex-1 overflow-y-auto p-6 min-w-0">
+            <div className="flex items-center justify-between mb-4 gap-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl font-semibold truncate" style={{ color: TEXT }}>{lens.name}</h2>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                <Button size="sm" onClick={() => { setShowFov(v => !v); setShowNotes(false); }} style={showFov ? btnActiveStyle : btnStyle}>
                   <Calculator className="h-3 w-3 mr-1" />FOV
+                </Button>
+                <Button size="sm" onClick={() => { setShowNotes(v => !v); setShowFov(false); }} style={showNotes ? btnActiveStyle : btnStyle}>
+                  <StickyNote className="h-3 w-3 mr-1" />Notes
+                  {notes.length > 0 && (
+                    <span className="ml-1 rounded-full px-1 text-xs" style={{ background: 'rgba(59,130,246,0.2)', color: 'rgba(59,130,246,1)' }}>{notes.length}</span>
+                  )}
                 </Button>
                 {!isEditing ? (
                   <>
@@ -452,12 +529,8 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
 
             {divider}
 
-            {/* Similar lenses panel */}
             <div>
-              <button
-                className="flex items-center justify-between w-full text-left py-2"
-                onClick={() => setShowSimilar(v => !v)}
-              >
+              <button className="flex items-center justify-between w-full text-left py-2" onClick={() => setShowSimilar(v => !v)}>
                 <p className="text-sm font-medium" style={{ color: TEXT }}>Similar lenses</p>
                 <span className="text-xs" style={{ color: TEXT_MUTED }}>{showSimilar ? '▲' : '▼'}</span>
               </button>
@@ -465,15 +538,11 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
                 <div className="mt-2 space-y-2">
                   <div className="flex gap-1 flex-wrap">
                     {(['sensor','efl','fov','imageCircle'] as const).map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setSimilarBy(opt)}
-                        className="px-2 py-0.5 rounded-full text-xs border transition-colors"
+                      <button key={opt} onClick={() => setSimilarBy(opt)} className="px-2 py-0.5 rounded-full text-xs border transition-colors"
                         style={similarBy === opt
                           ? { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.4)', color: TEXT }
                           : { background: 'transparent', border: '1px solid rgba(134,134,134,0.3)', color: TEXT_MUTED }
-                        }
-                      >
+                        }>
                         {opt === 'sensor' ? 'Sensor' : opt === 'efl' ? 'EFL ±20%' : opt === 'fov' ? 'FOV ±15°' : 'Image Circle ±1mm'}
                       </button>
                     ))}
@@ -485,18 +554,12 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
                   ) : (
                     <div className="space-y-1">
                       {similarLenses.map(sl => (
-                        <button
-                          key={sl.id}
-                          onClick={() => setCompareWith(sl)}
+                        <button key={sl.id} onClick={() => setCompareWith(sl)}
                           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors hover:bg-black/5"
-                          style={{ border: '1px solid rgba(134,134,134,0.2)' }}
-                        >
+                          style={{ border: '1px solid rgba(134,134,134,0.2)' }}>
                           <span className="text-xs font-medium line-clamp-1" style={{ color: TEXT }}>{sl.name}</span>
                           <span className="text-xs ml-2 shrink-0" style={{ color: TEXT_MUTED }}>
-                            {similarBy === 'sensor' ? sl.sensorSize
-                              : similarBy === 'efl' ? (sl.efl ? sl.efl + 'mm' : '—')
-                              : similarBy === 'fov' ? (sl.fovD ? sl.fovD + '°' : '—')
-                              : (sl.maxImageCircle ? sl.maxImageCircle + 'mm' : '—')}
+                            {similarBy === 'sensor' ? sl.sensorSize : similarBy === 'efl' ? (sl.efl ? sl.efl + 'mm' : '—') : similarBy === 'fov' ? (sl.fovD ? sl.fovD + '°' : '—') : (sl.maxImageCircle ? sl.maxImageCircle + 'mm' : '—')}
                           </span>
                         </button>
                       ))}
@@ -509,11 +572,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
         </div>
       </div>
       {compareWith && lens && (
-        <LensComparison
-          lenses={[lens, compareWith]}
-          open={true}
-          onOpenChange={(o) => { if (!o) setCompareWith(null); }}
-        />
+        <LensComparison lenses={[lens, compareWith]} open={true} onOpenChange={(o) => { if (!o) setCompareWith(null); }} />
       )}
     </>
   );

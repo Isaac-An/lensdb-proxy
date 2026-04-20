@@ -4,7 +4,7 @@ import type { SupplierLens, Lens } from '@/app/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Calculator, X } from 'lucide-react';
+import { Calculator, X, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useFirebase } from '@/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { LensComparison } from '../lens-comparison';
 
 type ProductDetailsProps = {
@@ -120,6 +120,8 @@ const backdropStyle = {
   WebkitBackdropFilter: 'blur(16px)',
 } as const;
 
+const inputStyle = { background: 'white', border: '1px solid #d1d5db', color: TEXT };
+
 const divider = <div style={{ height: '1px', background: 'rgb(134, 134, 134)', margin: '4px 0' }} />;
 
 function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
@@ -150,12 +152,10 @@ function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
     };
   }, [dims, eflNum]);
 
-  const inputStyle = { background: 'white', border: '1px solid #d1d5db', color: 'rgba(76, 76, 76, 1)' };
-
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'rgba(76, 76, 76, 1)' }}>Sensor</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: TEXT }}>Sensor</Label>
         <Select value={sensorPreset} onValueChange={v => { setSensorPreset(v); setCustomW(''); setCustomH(''); }}>
           <SelectTrigger className="h-8 text-xs" style={inputStyle}><SelectValue placeholder="Select sensor..." /></SelectTrigger>
           <SelectContent>
@@ -166,7 +166,7 @@ function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
       </div>
       {(!sensorPreset || sensorPreset === 'custom') && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'rgba(76, 76, 76,1)' }}>Custom size (mm)</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: TEXT }}>Custom size (mm)</Label>
           <div className="flex gap-2">
             <Input type="number" placeholder="Width" value={customW} onChange={e => setCustomW(e.target.value)} className="h-8 text-xs" style={inputStyle} />
             <Input type="number" placeholder="Height" value={customH} onChange={e => setCustomH(e.target.value)} className="h-8 text-xs" style={inputStyle} />
@@ -174,21 +174,21 @@ function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
         </div>
       )}
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'rgba(76, 76, 76, 1)' }}>EFL (mm)</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wide" style={{ color: TEXT }}>EFL (mm)</Label>
         <Input type="number" placeholder={lensEfl ? `${lensEfl} (from lens)` : 'Enter EFL...'} value={eflOverride} onChange={e => setEflOverride(e.target.value)} className="h-8 text-xs" style={inputStyle} />
-        {!eflOverride && lensEfl && <p className="text-xs" style={{ color: 'rgba(76, 76, 76, 1)' }}>Using lens EFL: {lensEfl}mm</p>}
+        {!eflOverride && lensEfl && <p className="text-xs" style={{ color: TEXT }}>Using lens EFL: {lensEfl}mm</p>}
       </div>
       {results ? (
-        <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
+        <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(249,250,251,1)', border: '1px solid #e5e7eb' }}>
           {[['Horizontal', results.horizontal], ['Vertical', results.vertical], ['Diagonal', results.diagonal]].map(([label, val]) => (
             <div key={label as string} className="flex justify-between text-xs">
-              <span style={{ color: 'rgba(76, 76, 76, 1)' }}>{label}</span>
-              <span className="font-semibold" style={{ color: 'rgb(76, 76, 76)' }}>{(val as number).toFixed(1)}°</span>
+              <span style={{ color: TEXT_MUTED }}>{label}</span>
+              <span className="font-semibold" style={{ color: TEXT }}>{(val as number).toFixed(1)}°</span>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-xs" style={{ color: 'rgba(76, 76, 76, 1)' }}>{!dims ? 'Select a sensor to calculate FOV.' : 'Enter a valid EFL to calculate.'}</p>
+        <p className="text-xs" style={{ color: TEXT_MUTED }}>{!dims ? 'Select a sensor to calculate FOV.' : 'Enter a valid EFL to calculate.'}</p>
       )}
     </div>
   );
@@ -199,16 +199,27 @@ const formatValue = (value: string | number | undefined | null, unit: string = '
   return `${value}${unit}`;
 };
 
+type Note = { id: string; text: string; timestamp: number };
+
 export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDetailsProps) {
   const [showFov, setShowFov] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [showSimilar, setShowSimilar] = useState(false);
   const [compareWith, setCompareWith] = useState<Lens | null>(null);
   const [similarBy, setSimilarBy] = useState<'sensor'|'efl'|'fov'|'imageCircle'>('sensor');
   const [allLensesPool, setAllLensesPool] = useState<Lens[]>([]);
   const [isLoadingPool, setIsLoadingPool] = useState(false);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [noteInput, setNoteInput] = useState('');
+  const [isLoadingNotes, setIsLoadingNotes] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const { firestore } = useFirebase();
+
   useEffect(() => {
     setShowSimilar(false);
+    setShowNotes(false);
+    setNotes([]);
+    setNoteInput('');
   }, [lens]);
 
   useEffect(() => {
@@ -226,6 +237,33 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
     }).finally(() => setIsLoadingPool(false));
   }, [showSimilar, firestore]);
 
+  useEffect(() => {
+    if (!showNotes || !firestore || !lens?.id) return;
+    setIsLoadingNotes(true);
+    getDocs(collection(firestore, 'supplier_lenses', lens.id, 'notes'))
+      .then(snap => {
+        const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as Note));
+        loaded.sort((a, b) => b.timestamp - a.timestamp);
+        setNotes(loaded);
+      })
+      .finally(() => setIsLoadingNotes(false));
+  }, [showNotes, lens?.id, firestore]);
+
+  const handleAddNote = async () => {
+    if (!noteInput.trim() || !firestore || !lens?.id) return;
+    setIsSavingNote(true);
+    try {
+      const ref = await addDoc(
+        collection(firestore, 'supplier_lenses', lens.id, 'notes'),
+        { text: noteInput.trim(), timestamp: Date.now(), createdAt: serverTimestamp() }
+      );
+      setNotes(prev => [{ id: ref.id, text: noteInput.trim(), timestamp: Date.now() }, ...prev]);
+      setNoteInput('');
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
   const similarLenses = useMemo(() => {
     if (!lens || allLensesPool.length === 0) return [];
     const pool = allLensesPool.filter(l => l.id !== lens.id);
@@ -237,7 +275,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
       const efl = parseFloat(lens.efl || '');
       if (isNaN(efl)) return [];
       return pool.filter(l => { const v = parseFloat(l.efl || ''); return !isNaN(v) && Math.abs(v - efl) / efl <= 0.2; })
-        .sort((a,b) => Math.abs(parseFloat(a.efl||'0')-efl) - Math.abs(parseFloat(b.efl||'0')-efl)).slice(0, 5);
+        .sort((a,b) => Math.abs(parseFloat(a.efl||'0')-parseFloat(lens.efl||'0')) - Math.abs(parseFloat(b.efl||'0')-parseFloat(lens.efl||'0'))).slice(0, 5);
     }
     if (similarBy === 'fov') {
       const fov = parseFloat(lens.fovD || '');
@@ -256,36 +294,91 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
 
   if (!lens || !open) return null;
 
+  const sidePanelOpen = showFov || showNotes;
+  const btnBase = { background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(134,134,134,0.4)', color: TEXT };
+  const btnActive = { background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.5)', color: 'rgba(59,130,246,1)' };
+
   return (
     <>
       <div className="fixed inset-0 z-50" style={backdropStyle} onClick={() => onOpenChange(false)} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto relative w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden flex" style={glassStyle}>
+        <div
+          className="pointer-events-auto relative w-full max-h-[90vh] rounded-3xl overflow-hidden flex transition-all duration-300"
+          style={{ ...glassStyle, maxWidth: sidePanelOpen ? '56rem' : '42rem' }}
+        >
 
           {/* FOV Calculator panel */}
           {showFov && (
-            <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)' }}>
-              <p className="text-sm font-semibold mb-4" style={{ color: 'rgb(76, 76, 76)' }}>FOV Calculator</p>
+            <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
+              <p className="text-sm font-semibold mb-4" style={{ color: TEXT }}>FOV Calculator</p>
               <FovCalculator lensEfl={lens.efl} />
             </div>
           )}
 
-          {/* Specs */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="min-w-0">
-                <h2 className="text-xl font-semibold break-words" style={{ color: 'rgb(76, 76, 76)' }}>{lens.name}</h2>
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {lens.supplier && <Badge style={{ background: 'rgba(255, 255, 255, 0.49)', color: 'rgb(76, 76, 76)', border: '1px solid rgba(255,255,255,0.25)' }}>{lens.supplier}</Badge>}
-                  {lens.countryOfOrigin && <Badge style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(76, 76, 76,1)', border: '1px solid rgba(255,255,255,0.2)' }}>{lens.countryOfOrigin}</Badge>}
+          {/* Notes panel */}
+          {showNotes && (
+            <div className="w-64 shrink-0 overflow-y-auto p-6 flex flex-col gap-3" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
+              <p className="text-sm font-semibold" style={{ color: TEXT }}>Notes</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a note..."
+                  value={noteInput}
+                  onChange={e => setNoteInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddNote()}
+                  className="h-8 text-xs flex-1"
+                  style={inputStyle}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={isSavingNote || !noteInput.trim()}
+                  style={btnBase}
+                >
+                  +
+                </Button>
+              </div>
+              {isLoadingNotes ? (
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>Loading...</p>
+              ) : notes.length === 0 ? (
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>No notes yet. Press Enter to add.</p>
+              ) : (
+                <div className="space-y-2">
+                  {notes.map(n => (
+                    <div key={n.id} className="rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
+                      <p className="text-xs" style={{ color: TEXT }}>{n.text}</p>
+                      <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>
+                        {new Date(n.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Main specs panel */}
+          <div className="flex-1 overflow-y-auto p-6 min-w-0">
+            <div className="flex items-center justify-between mb-4 gap-4">
+              {/* Name + badges — left side, never wraps the name */}
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl font-semibold truncate" style={{ color: TEXT }}>{lens.name}</h2>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {lens.supplier && <Badge style={{ background: 'rgba(255,255,255,0.49)', color: TEXT, border: '1px solid rgba(255,255,255,0.25)' }}>{lens.supplier}</Badge>}
+                  {lens.countryOfOrigin && <Badge style={{ background: 'rgba(255,255,255,0.1)', color: TEXT, border: '1px solid rgba(255,255,255,0.2)' }}>{lens.countryOfOrigin}</Badge>}
                 </div>
               </div>
-              <div className="flex items-center gap-2 ml-4 shrink-0">
-                <Button size="sm" onClick={() => setShowFov(v => !v)}
-                  style={{ background: showFov ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.4)', border: showFov ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(134,134,134,0.4)', color: showFov ? 'rgba(59,130,246,1)' : 'rgba(76,76,76,1)' }}>
+              {/* Buttons — right side, never wrap onto name */}
+              <div className="flex items-center gap-2 shrink-0">
+                <Button size="sm" onClick={() => { setShowFov(v => !v); setShowNotes(false); }} style={showFov ? btnActive : btnBase}>
                   <Calculator className="h-3 w-3 mr-1" />FOV
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: 'rgba(76, 76, 76, 1)' }}>
+                <Button size="sm" onClick={() => { setShowNotes(v => !v); setShowFov(false); }} style={showNotes ? btnActive : btnBase}>
+                  <StickyNote className="h-3 w-3 mr-1" />Notes
+                  {notes.length > 0 && (
+                    <span className="ml-1 rounded-full px-1 text-xs" style={{ background: 'rgba(59,130,246,0.2)', color: 'rgba(59,130,246,1)' }}>{notes.length}</span>
+                  )}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: TEXT_MUTED }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -313,7 +406,6 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
               {lens.price && <>{divider}<DetailItem label="Price" value={lens.price} /></>}
             </div>
 
-            {/* divider */}
             <div style={{ height: '1px', background: 'rgba(134,134,134,0.25)', margin: '12px 0' }} />
 
             {/* Similar lenses */}
@@ -322,7 +414,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                 className="flex items-center justify-between w-full text-left py-2"
                 onClick={() => setShowSimilar(v => !v)}
               >
-                <p className="text-sm font-medium" style={{ color: 'rgb(76,76,76)' }}>Similar lenses</p>
+                <p className="text-sm font-medium" style={{ color: TEXT }}>Similar lenses</p>
                 <span className="text-xs" style={{ color: 'rgba(76,76,76,0.5)' }}>{showSimilar ? '▲' : '▼'}</span>
               </button>
               {showSimilar && (
@@ -334,7 +426,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                         onClick={() => setSimilarBy(opt)}
                         className="px-2 py-0.5 rounded-full text-xs border transition-colors"
                         style={similarBy === opt
-                          ? { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.4)', color: 'rgb(76,76,76)' }
+                          ? { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.4)', color: TEXT }
                           : { background: 'transparent', border: '1px solid rgba(134,134,134,0.3)', color: 'rgba(76,76,76,0.5)' }
                         }
                       >
@@ -355,7 +447,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors hover:bg-black/5"
                           style={{ border: '1px solid rgba(134,134,134,0.2)' }}
                         >
-                          <span className="text-xs font-medium line-clamp-1" style={{ color: 'rgb(76,76,76)' }}>{sl.name}</span>
+                          <span className="text-xs font-medium line-clamp-1" style={{ color: TEXT }}>{sl.name}</span>
                           <span className="text-xs ml-2 shrink-0" style={{ color: 'rgba(76,76,76,0.5)' }}>
                             {similarBy === 'sensor' ? sl.sensorSize
                               : similarBy === 'efl' ? (sl.efl ? sl.efl + 'mm' : '—')
