@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useFirebase } from '@/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { useIsSuperAdmin } from '@/hooks/use-is-superadmin';
+import { useIsAdmin } from '@/hooks/use-is-admin';
+// and change:
+const { isSuperAdmin } = useIsAdmin();
 import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

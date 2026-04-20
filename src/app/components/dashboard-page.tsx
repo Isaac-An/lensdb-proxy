@@ -16,6 +16,7 @@ import { UpdateConfirmationDialog } from './update-confirmation-dialog';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { LensComparison } from './lens-comparison';
 import { CompareBar } from './compare-bar';
+import { ErrorDashboard, ErrorDashboardBadge } from './error-dashboard';
 
 export type Filters = {
   searchQuery: string;
@@ -69,14 +70,10 @@ const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
     return true;
 };
 
-// Extract mount type prefix: "M12XP0.5" -> "M12", "M12x0.5" -> "M12", "C-Mount" -> "C-Mount"
-// Handles x, X, *, and the Unicode multiplication sign U+00D7
 function getMountPrefix(mountType: string | null | undefined): string | null {
   if (!mountType) return null;
-  // Split on any separator: *, x, X, ×, or spaces around them
   const match = mountType.match(/^([A-Za-z]+[\d]*(?:\.\d+)?)\s*[\*xX\u00D7]\s*/i);
   if (match) {
-    // Remove trailing .00 or .0 (M12.00 -> M12, M8.00 -> M8)
     return match[1].replace(/\.0+$/, '').trim();
   }
   return mountType.trim();
@@ -84,7 +81,7 @@ function getMountPrefix(mountType: string | null | undefined): string | null {
 
 export function DashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, isSuperAdmin } = useIsAdmin();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: lenses = [], isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
 
@@ -98,6 +95,7 @@ export function DashboardPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<Lens[]>([]);
   const [isCompareOpen, setCompareOpen] = useState(false);
+  const [showErrorDashboard, setShowErrorDashboard] = useState(false);
 
   const { toast } = useToast();
 
@@ -325,6 +323,7 @@ export function DashboardPage() {
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
         >
+          {isSuperAdmin && <ErrorDashboardBadge onClick={() => setShowErrorDashboard(true)} />}
           <DataMenu onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} allLenses={lenses} />
         </AppHeader>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -365,6 +364,7 @@ export function DashboardPage() {
           onOpenChange={setCompareOpen}
         />
       )}
+      <ErrorDashboard open={showErrorDashboard} onClose={() => setShowErrorDashboard(false)} />
     </div>
   );
 }
