@@ -5,7 +5,7 @@ import type { Lens } from '@/app/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Pencil, X, Save, Trash2, RefreshCw, Calculator, StickyNote, Check } from 'lucide-react';
+import { FileText, Pencil, X, Save, Trash2, RefreshCw, Calculator, StickyNote, Check, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirebase } from '@/firebase';
 import { LensComparison } from './lens-comparison';
@@ -234,6 +234,9 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteText, setEditingNoteText] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLog, setHistoryLog] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showSimilar, setShowSimilar] = useState(false);
   const [compareWith, setCompareWith] = useState<Lens | null>(null);
   const [similarBy, setSimilarBy] = useState<'sensor'|'efl'|'fov'|'imageCircle'>('sensor');
@@ -247,6 +250,8 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     setIsEditing(false);
     setShowFov(false);
     setShowNotes(false);
+    setShowHistory(false);
+    setHistoryLog([]);
     setNotes([]);
     setNoteInput('');
     setShowSimilar(false);
@@ -278,6 +283,18 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
       })
       .finally(() => setIsLoadingNotes(false));
   }, [showNotes, lens?.id, firestore]);
+
+  useEffect(() => {
+    if (!showHistory || !firestore || !lens?.id) return;
+    setIsLoadingHistory(true);
+    getDocs(collection(firestore, 'products', lens.id, 'history'))
+      .then(snap => {
+        const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        loaded.sort((a: any, b: any) => b.timestamp - a.timestamp);
+        setHistoryLog(loaded);
+      })
+      .finally(() => setIsLoadingHistory(false));
+  }, [showHistory, lens?.id, firestore]);
 
   const handleAddNote = async () => {
     if (!noteInput.trim() || !firestore || !lens?.id) return;
@@ -348,7 +365,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
 
   const hasPdfUrl = lens.pdfUrl && lens.pdfUrl.startsWith('https://');
   const isFromPdf = !!lens.sourcePath;
-  const sidePanelOpen = showFov || showNotes;
+  const sidePanelOpen = showFov || showNotes || showHistory;
 
   const btnStyle = { background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(134,134,134,0.4)', color: TEXT };
   const btnActiveStyle = { background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.5)', color: 'rgba(59,130,246,1)' };
@@ -357,7 +374,28 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     if (!firestore || !lens.id) return;
     setIsSaving(true);
     try {
+      // Compute changed fields
+      const changes: { field: string; from: string; to: string }[] = [];
+      editableFields.forEach(f => {
+        const oldVal = String(lens[f.key] ?? '').trim();
+        const newVal = String((editData[f.key] as string) ?? '').trim();
+        if (oldVal !== newVal) changes.push({ field: f.label, from: oldVal || '—', to: newVal || '—' });
+      });
+
       await setDoc(doc(firestore, 'products', lens.id), { ...editData, updatedAt: new Date() }, { merge: true });
+
+      // Write history entry if there were changes
+      if (changes.length > 0) {
+        const { getAuth } = await import('firebase/auth');
+        const user = getAuth().currentUser;
+        await addDoc(collection(firestore, 'products', lens.id, 'history'), {
+          changes,
+          editedBy: user?.email || 'unknown',
+          timestamp: Date.now(),
+          createdAt: serverTimestamp(),
+        });
+      }
+
       toast({ title: 'Saved', description: 'Lens updated successfully.' });
       setIsEditing(false);
     } catch (err: any) {
@@ -482,6 +520,39 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
             </div>
           )}
 
+          {/* History panel */}
+          {showHistory && (
+            <div className="w-64 shrink-0 overflow-y-auto p-6 flex flex-col gap-3" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
+              <p className="text-sm font-semibold" style={{ color: TEXT }}>Edit History</p>
+              {isLoadingHistory ? (
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>Loading...</p>
+              ) : historyLog.length === 0 ? (
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>No edits recorded yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {historyLog.map((entry: any) => (
+                    <div key={entry.id} className="rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: TEXT }}>{entry.editedBy}</p>
+                      <div className="space-y-1">
+                        {entry.changes?.map((c: any, i: number) => (
+                          <div key={i} className="text-xs" style={{ color: TEXT_MUTED }}>
+                            <span className="font-medium">{c.field}:</span>{' '}
+                            <span style={{ color: 'rgba(200,50,50,0.8)' }}>{c.from}</span>
+                            {' → '}
+                            <span style={{ color: 'rgb(30,120,30)' }}>{c.to}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>
+                        {new Date(entry.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Main content */}
           <div className="flex-1 overflow-y-auto p-6 min-w-0">
             <div className="flex items-center justify-between mb-4 gap-4">
@@ -489,14 +560,17 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
                 <h2 className="text-xl font-semibold truncate" style={{ color: TEXT }}>{lens.name}</h2>
               </div>
               <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                <Button size="sm" onClick={() => { setShowFov(v => !v); setShowNotes(false); }} style={showFov ? btnActiveStyle : btnStyle}>
+                <Button size="sm" onClick={() => { setShowFov(v => !v); setShowNotes(false); setShowHistory(false); }} style={showFov ? btnActiveStyle : btnStyle}>
                   <Calculator className="h-3 w-3 mr-1" />FOV
                 </Button>
-                <Button size="sm" onClick={() => { setShowNotes(v => !v); setShowFov(false); }} style={showNotes ? btnActiveStyle : btnStyle}>
+                <Button size="sm" onClick={() => { setShowNotes(v => !v); setShowFov(false); setShowHistory(false); }} style={showNotes ? btnActiveStyle : btnStyle}>
                   <StickyNote className="h-3 w-3 mr-1" />Notes
                   {notes.length > 0 && (
                     <span className="ml-1 rounded-full px-1 text-xs" style={{ background: 'rgba(59,130,246,0.2)', color: 'rgba(59,130,246,1)' }}>{notes.length}</span>
                   )}
+                </Button>
+                <Button size="sm" onClick={() => { setShowHistory(v => !v); setShowFov(false); setShowNotes(false); }} style={showHistory ? btnActiveStyle : btnStyle}>
+                  <History className="h-3 w-3 mr-1" />History
                 </Button>
                 {!isEditing ? (
                   <>
