@@ -118,12 +118,7 @@ const backdropStyle = {
   WebkitBackdropFilter: 'blur(16px)',
 } as const;
 
-const inputStyle = {
-  background: 'white',
-  border: '1px solid #d1d5db',
-  color: TEXT,
-};
-
+const inputStyle = { background: 'white', border: '1px solid #d1d5db', color: TEXT };
 const divider = <div style={{ height: '1px', background: 'rgb(134,134,134)', margin: '4px 0' }} />;
 
 function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
@@ -228,13 +223,13 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [showFov, setShowFov] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteInput, setNoteInput] = useState('');
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteText, setEditingNoteText] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
   const [historyLog, setHistoryLog] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showSimilar, setShowSimilar] = useState(false);
@@ -251,9 +246,9 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     setShowFov(false);
     setShowNotes(false);
     setShowHistory(false);
-    setHistoryLog([]);
     setNotes([]);
     setNoteInput('');
+    setHistoryLog([]);
     setShowSimilar(false);
   }, [lens]);
 
@@ -306,9 +301,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
       );
       setNotes(prev => [{ id: ref.id, text: noteInput.trim(), timestamp: Date.now() }, ...prev]);
       setNoteInput('');
-    } finally {
-      setIsSavingNote(false);
-    }
+    } finally { setIsSavingNote(false); }
   };
 
   const handleDeleteNote = async (noteId: string) => {
@@ -337,26 +330,20 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     if (similarBy === 'efl') {
       const efl = parseFloat(lens.efl || '');
       if (isNaN(efl)) return [];
-      return pool.filter(l => {
-        const v = parseFloat(l.efl || '');
-        return !isNaN(v) && Math.abs(v - efl) / efl <= 0.2;
-      }).sort((a,b) => Math.abs(parseFloat(a.efl||'0')-efl) - Math.abs(parseFloat(b.efl||'0')-efl)).slice(0, 5);
+      return pool.filter(l => { const v = parseFloat(l.efl || ''); return !isNaN(v) && Math.abs(v - efl) / efl <= 0.2; })
+        .sort((a,b) => Math.abs(parseFloat(a.efl||'0')-efl) - Math.abs(parseFloat(b.efl||'0')-efl)).slice(0, 5);
     }
     if (similarBy === 'fov') {
       const fov = parseFloat(lens.fovD || '');
       if (isNaN(fov)) return [];
-      return pool.filter(l => {
-        const v = parseFloat(l.fovD || '');
-        return !isNaN(v) && Math.abs(v - fov) <= 15;
-      }).sort((a,b) => Math.abs(parseFloat(a.fovD||'0')-fov) - Math.abs(parseFloat(b.fovD||'0')-fov)).slice(0, 5);
+      return pool.filter(l => { const v = parseFloat(l.fovD || ''); return !isNaN(v) && Math.abs(v - fov) <= 15; })
+        .sort((a,b) => Math.abs(parseFloat(a.fovD||'0')-fov) - Math.abs(parseFloat(b.fovD||'0')-fov)).slice(0, 5);
     }
     if (similarBy === 'imageCircle') {
       const ic = parseFloat(lens.maxImageCircle || '');
       if (isNaN(ic)) return [];
-      return pool.filter(l => {
-        const v = parseFloat(l.maxImageCircle || '');
-        return !isNaN(v) && Math.abs(v - ic) <= 1;
-      }).sort((a,b) => Math.abs(parseFloat(a.maxImageCircle||'0')-ic) - Math.abs(parseFloat(b.maxImageCircle||'0')-ic)).slice(0, 5);
+      return pool.filter(l => { const v = parseFloat(l.maxImageCircle || ''); return !isNaN(v) && Math.abs(v - ic) <= 1; })
+        .sort((a,b) => Math.abs(parseFloat(a.maxImageCircle||'0')-ic) - Math.abs(parseFloat(b.maxImageCircle||'0')-ic)).slice(0, 5);
     }
     return [];
   }, [lens, allLensesPool, similarBy]);
@@ -374,17 +361,13 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     if (!firestore || !lens.id) return;
     setIsSaving(true);
     try {
-      // Compute changed fields
       const changes: { field: string; from: string; to: string }[] = [];
       editableFields.forEach(f => {
         const oldVal = String(lens[f.key] ?? '').trim();
         const newVal = String((editData[f.key] as string) ?? '').trim();
         if (oldVal !== newVal) changes.push({ field: f.label, from: oldVal || '—', to: newVal || '—' });
       });
-
       await setDoc(doc(firestore, 'products', lens.id), { ...editData, updatedAt: new Date() }, { merge: true });
-
-      // Write history entry if there were changes
       if (changes.length > 0) {
         const { getAuth } = await import('firebase/auth');
         const user = getAuth().currentUser;
@@ -395,7 +378,6 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
           createdAt: serverTimestamp(),
         });
       }
-
       toast({ title: 'Saved', description: 'Lens updated successfully.' });
       setIsEditing(false);
     } catch (err: any) {
@@ -419,9 +401,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
       toast({ title: 'Re-extraction started', description: 'The lens data will update shortly.' });
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Re-extraction failed', description: err.message });
-    } finally {
-      setIsReExtracting(false);
-    }
+    } finally { setIsReExtracting(false); }
   };
 
   const handleDelete = async () => {
@@ -443,7 +423,6 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
           className="pointer-events-auto relative w-full max-h-[90vh] rounded-3xl overflow-hidden flex transition-all duration-300"
           style={{ ...glassStyle, maxWidth: sidePanelOpen ? '56rem' : '42rem' }}
         >
-
           {/* FOV Calculator panel */}
           {showFov && (
             <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
@@ -480,14 +459,8 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
                     <div key={n.id} className="group rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
                       {editingNoteId === n.id ? (
                         <div className="flex flex-col gap-1">
-                          <textarea
-                            value={editingNoteText}
-                            onChange={e => setEditingNoteText(e.target.value)}
-                            rows={3}
-                            className="w-full rounded text-xs p-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300"
-                            style={inputStyle}
-                            autoFocus
-                          />
+                          <textarea value={editingNoteText} onChange={e => setEditingNoteText(e.target.value)} rows={3}
+                            className="w-full rounded text-xs p-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300" style={inputStyle} autoFocus />
                           <div className="flex gap-1 justify-end">
                             <button onClick={() => { setEditingNoteId(null); setEditingNoteText(''); }} className="p-1 rounded hover:bg-gray-100">
                               <X className="h-3 w-3" style={{ color: 'rgba(134,134,134,1)' }} />
@@ -543,9 +516,7 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
                           </div>
                         ))}
                       </div>
-                      <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>
-                        {new Date(entry.timestamp).toLocaleString()}
-                      </p>
+                      <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>{new Date(entry.timestamp).toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
@@ -555,11 +526,15 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
 
           {/* Main content */}
           <div className="flex-1 overflow-y-auto p-6 min-w-0">
-            <div className="flex items-center justify-between mb-4 gap-4">
-              <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-semibold truncate" style={{ color: TEXT }}>{lens.name}</h2>
+            {/* Name on its own line, buttons below */}
+            <div className="mb-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h2 className="text-xl font-semibold" style={{ color: TEXT }}>{lens.name}</h2>
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: TEXT_MUTED }} className="shrink-0 -mt-1">
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button size="sm" onClick={() => { setShowFov(v => !v); setShowNotes(false); setShowHistory(false); }} style={showFov ? btnActiveStyle : btnStyle}>
                   <Calculator className="h-3 w-3 mr-1" />FOV
                 </Button>
@@ -592,7 +567,6 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: TEXT_MUTED }}><X className="h-4 w-4" /></Button>
                   </>
                 ) : (
                   <>

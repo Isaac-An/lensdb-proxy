@@ -121,7 +121,6 @@ const backdropStyle = {
 } as const;
 
 const inputStyle = { background: 'white', border: '1px solid #d1d5db', color: TEXT };
-
 const divider = <div style={{ height: '1px', background: 'rgb(134, 134, 134)', margin: '4px 0' }} />;
 
 function FovCalculator({ lensEfl }: { lensEfl: string | null | undefined }) {
@@ -255,7 +254,6 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
     if (!noteInput.trim() || !firestore || !lens?.id) return;
     setIsSavingNote(true);
     try {
-      const { doc: fsDoc, setDoc: fsSetDoc, deleteDoc: fsDeleteDoc } = await import('firebase/firestore');
       const ref = await addDoc(
         collection(firestore, 'supplier_lenses', lens.id, 'notes'),
         { text: noteInput.trim(), timestamp: Date.now(), createdAt: serverTimestamp() }
@@ -325,7 +323,6 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
           className="pointer-events-auto relative w-full max-h-[90vh] rounded-3xl overflow-hidden flex transition-all duration-300"
           style={{ ...glassStyle, maxWidth: sidePanelOpen ? '56rem' : '42rem' }}
         >
-
           {/* FOV Calculator panel */}
           {showFov && (
             <div className="w-64 shrink-0 overflow-y-auto p-6" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
@@ -348,13 +345,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                   className="w-full rounded-md text-xs p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300"
                   style={inputStyle}
                 />
-                <Button
-                  size="sm"
-                  onClick={handleAddNote}
-                  disabled={isSavingNote || !noteInput.trim()}
-                  className="self-end"
-                  style={btnBase}
-                >
+                <Button size="sm" onClick={handleAddNote} disabled={isSavingNote || !noteInput.trim()} className="self-end" style={btnBase}>
                   {isSavingNote ? '...' : 'Add note'}
                 </Button>
               </div>
@@ -368,14 +359,8 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                     <div key={n.id} className="group rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
                       {editingNoteId === n.id ? (
                         <div className="flex flex-col gap-1">
-                          <textarea
-                            value={editingNoteText}
-                            onChange={e => setEditingNoteText(e.target.value)}
-                            rows={3}
-                            className="w-full rounded text-xs p-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300"
-                            style={inputStyle}
-                            autoFocus
-                          />
+                          <textarea value={editingNoteText} onChange={e => setEditingNoteText(e.target.value)} rows={3}
+                            className="w-full rounded text-xs p-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300" style={inputStyle} autoFocus />
                           <div className="flex gap-1 justify-end">
                             <button onClick={() => { setEditingNoteId(null); setEditingNoteText(''); }} className="p-1 rounded hover:bg-gray-100">
                               <X className="h-3 w-3" style={{ color: 'rgba(134,134,134,1)' }} />
@@ -398,9 +383,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                               </button>
                             </div>
                           </div>
-                          <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>
-                            {new Date(n.timestamp).toLocaleString()}
-                          </p>
+                          <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>{new Date(n.timestamp).toLocaleString()}</p>
                         </>
                       )}
                     </div>
@@ -412,17 +395,15 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
 
           {/* Main specs panel */}
           <div className="flex-1 overflow-y-auto p-6 min-w-0">
-            <div className="flex items-center justify-between mb-4 gap-4">
-              {/* Name + badges — left side, never wraps the name */}
-              <div className="min-w-0 flex-1">
-                <h2 className="text-xl font-semibold truncate" style={{ color: TEXT }}>{lens.name}</h2>
-                <div className="flex gap-2 mt-1 flex-wrap">
-                  {lens.supplier && <Badge style={{ background: 'rgba(255,255,255,0.49)', color: TEXT, border: '1px solid rgba(255,255,255,0.25)' }}>{lens.supplier}</Badge>}
-                  {lens.countryOfOrigin && <Badge style={{ background: 'rgba(255,255,255,0.1)', color: TEXT, border: '1px solid rgba(255,255,255,0.2)' }}>{lens.countryOfOrigin}</Badge>}
-                </div>
+            {/* Name on its own line, then buttons */}
+            <div className="mb-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h2 className="text-xl font-semibold" style={{ color: TEXT }}>{lens.name}</h2>
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: TEXT_MUTED }} className="shrink-0 -mt-1">
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              {/* Buttons — right side, never wrap onto name */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button size="sm" onClick={() => { setShowFov(v => !v); setShowNotes(false); }} style={showFov ? btnActive : btnBase}>
                   <Calculator className="h-3 w-3 mr-1" />FOV
                 </Button>
@@ -432,9 +413,8 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                     <span className="ml-1 rounded-full px-1 text-xs" style={{ background: 'rgba(59,130,246,0.2)', color: 'rgba(59,130,246,1)' }}>{notes.length}</span>
                   )}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} style={{ color: TEXT_MUTED }}>
-                  <X className="h-4 w-4" />
-                </Button>
+                {lens.supplier && <Badge style={{ background: 'rgba(255,255,255,0.49)', color: TEXT, border: '1px solid rgba(255,255,255,0.25)' }}>{lens.supplier}</Badge>}
+                {lens.countryOfOrigin && <Badge style={{ background: 'rgba(255,255,255,0.1)', color: TEXT, border: '1px solid rgba(255,255,255,0.2)' }}>{lens.countryOfOrigin}</Badge>}
               </div>
             </div>
 
@@ -462,12 +442,8 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
 
             <div style={{ height: '1px', background: 'rgba(134,134,134,0.25)', margin: '12px 0' }} />
 
-            {/* Similar lenses */}
             <div>
-              <button
-                className="flex items-center justify-between w-full text-left py-2"
-                onClick={() => setShowSimilar(v => !v)}
-              >
+              <button className="flex items-center justify-between w-full text-left py-2" onClick={() => setShowSimilar(v => !v)}>
                 <p className="text-sm font-medium" style={{ color: TEXT }}>Similar lenses</p>
                 <span className="text-xs" style={{ color: 'rgba(76,76,76,0.5)' }}>{showSimilar ? '▲' : '▼'}</span>
               </button>
@@ -475,15 +451,11 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                 <div className="mt-2 space-y-2">
                   <div className="flex gap-1 flex-wrap">
                     {(['sensor','efl','fov','imageCircle'] as const).map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setSimilarBy(opt)}
-                        className="px-2 py-0.5 rounded-full text-xs border transition-colors"
+                      <button key={opt} onClick={() => setSimilarBy(opt)} className="px-2 py-0.5 rounded-full text-xs border transition-colors"
                         style={similarBy === opt
                           ? { background: 'rgba(76,76,76,0.15)', border: '1px solid rgba(76,76,76,0.4)', color: TEXT }
                           : { background: 'transparent', border: '1px solid rgba(134,134,134,0.3)', color: 'rgba(76,76,76,0.5)' }
-                        }
-                      >
+                        }>
                         {opt === 'sensor' ? 'Sensor' : opt === 'efl' ? 'EFL ±20%' : opt === 'fov' ? 'FOV ±15°' : 'Image Circle ±1mm'}
                       </button>
                     ))}
@@ -495,12 +467,9 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
                   ) : (
                     <div className="space-y-1">
                       {similarLenses.map(sl => (
-                        <button
-                          key={sl.id}
-                          onClick={() => setCompareWith(sl)}
+                        <button key={sl.id} onClick={() => setCompareWith(sl)}
                           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors hover:bg-black/5"
-                          style={{ border: '1px solid rgba(134,134,134,0.2)' }}
-                        >
+                          style={{ border: '1px solid rgba(134,134,134,0.2)' }}>
                           <span className="text-xs font-medium line-clamp-1" style={{ color: TEXT }}>{sl.name}</span>
                           <span className="text-xs ml-2 shrink-0" style={{ color: 'rgba(76,76,76,0.5)' }}>
                             {similarBy === 'sensor' ? sl.sensorSize
@@ -519,11 +488,7 @@ export function SupplierProductDetails({ lens, open, onOpenChange }: ProductDeta
         </div>
       </div>
       {compareWith && lens && (
-        <LensComparison
-          lenses={[lens, compareWith]}
-          open={true}
-          onOpenChange={(o) => { if (!o) setCompareWith(null); }}
-        />
+        <LensComparison lenses={[lens, compareWith]} open={true} onOpenChange={(o) => { if (!o) setCompareWith(null); }} />
       )}
     </>
   );
