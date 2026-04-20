@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Lens } from '@/app/lib/types';
 import { FilterSidebar } from './filter-sidebar';
 import { AppHeader } from './header';
@@ -11,12 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 import { DataMenu } from './data-menu';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch, doc, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { UpdateConfirmationDialog } from './update-confirmation-dialog';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { LensComparison } from './lens-comparison';
 import { CompareBar } from './compare-bar';
-import { ErrorDashboard, ErrorDashboardBadge } from './error-dashboard';
+import dynamic from 'next/dynamic';
+
+const ErrorDashboard = dynamic(() => import('./error-dashboard').then(m => m.ErrorDashboard), { ssr: false });
+const ErrorDashboardBadge = dynamic(() => import('./error-dashboard').then(m => m.ErrorDashboardBadge), { ssr: false });
 
 export type Filters = {
   searchQuery: string;
@@ -45,37 +48,33 @@ const initialFilters: Filters = {
 };
 
 const naturalSort = (a: string, b: string) => {
-    const re = /AE-(L?M)(\d+)/i;
-    const aMatch = a.match(re);
-    const bMatch = b.match(re);
-    if (aMatch && bMatch) {
-        const aNum = parseInt(aMatch[2], 10);
-        const bNum = parseInt(bMatch[2], 10);
-        if (aNum !== bNum) return aNum - bNum;
-    }
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  const re = /AE-(L?M)(\d+)/i;
+  const aMatch = a.match(re);
+  const bMatch = b.match(re);
+  if (aMatch && bMatch) {
+    const aNum = parseInt(aMatch[2], 10);
+    const bNum = parseInt(bMatch[2], 10);
+    if (aNum !== bNum) return aNum - bNum;
+  }
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 };
 
 const areLensesEqual = (lens1: Partial<Lens>, lens2: Partial<Lens>) => {
-    const keysToCompare: (keyof Lens)[] = [
-        'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV',
-        'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'mountType',
-        'lensStructure', 'pdfUrl', 'price'
-    ];
-    for (const key of keysToCompare) {
-        const val1 = String(lens1[key] ?? '').trim();
-        const val2 = String(lens2[key] ?? '').trim();
-        if (val1 !== val2) return false;
-    }
-    return true;
+  const keysToCompare: (keyof Lens)[] = [
+    'sensorSize', 'efl', 'maxImageCircle', 'fNo', 'fovD', 'fovH', 'fovV',
+    'ttl', 'tvDistortion', 'relativeIllumination', 'chiefRayAngle', 'mountType',
+    'lensStructure', 'pdfUrl', 'price',
+  ];
+  for (const key of keysToCompare) {
+    if (String(lens1[key] ?? '').trim() !== String(lens2[key] ?? '').trim()) return false;
+  }
+  return true;
 };
 
 function getMountPrefix(mountType: string | null | undefined): string | null {
   if (!mountType) return null;
   const match = mountType.match(/^([A-Za-z]+[\d]*(?:\.\d+)?)\s*[\*xX\u00D7]\s*/i);
-  if (match) {
-    return match[1].replace(/\.0+$/, '').trim();
-  }
+  if (match) return match[1].replace(/\.0+$/, '').trim();
   return mountType.trim();
 }
 
@@ -83,14 +82,15 @@ export function DashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
   const { isAdmin, isSuperAdmin } = useIsAdmin();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
-  const { data: lenses = [], isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
+  const { data: rawLenses, isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
+  const lenses: Lens[] = (rawLenses ?? []) as Lens[];
 
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedLens, setSelectedLens] = useState<Lens | null>(null);
   const [splitLens, setSplitLens] = useState<Lens | null>(null);
   const [isSplitOpen, setSplitOpen] = useState(false);
   const [isDetailsOpen, setDetailsOpen] = useState(false);
-  const [lensesToUpdate, setLensesToUpdate] = useState<{current: Lens, updated: Lens}[]>([]);
+  const [lensesToUpdate, setLensesToUpdate] = useState<{ current: Lens; updated: Lens }[]>([]);
   const [isUpdateConfirmOpen, setUpdateConfirmOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<Lens[]>([]);
@@ -107,18 +107,16 @@ export function DashboardPage() {
     setIsImporting(true);
     const existingLensesMap = new Map(lenses.map(l => [l.name, l]));
     const newLenses: Lens[] = [];
-    const changedLenses: {current: Lens, updated: Lens}[] = [];
+    const changedLenses: { current: Lens; updated: Lens }[] = [];
     let skippedCount = 0;
     lensesToAppend.forEach(importedLens => {
       const existingLens = existingLensesMap.get(importedLens.name);
       if (!existingLens) {
         newLenses.push(importedLens);
+      } else if (!areLensesEqual(existingLens, importedLens)) {
+        changedLenses.push({ current: existingLens, updated: { ...importedLens, id: existingLens.id } });
       } else {
-        if (!areLensesEqual(existingLens, importedLens)) {
-          changedLenses.push({ current: existingLens, updated: { ...importedLens, id: existingLens.id } });
-        } else {
-          skippedCount++;
-        }
+        skippedCount++;
       }
     });
     if (newLenses.length > 0) {
@@ -127,11 +125,10 @@ export function DashboardPage() {
         const docRef = doc(productsCollection);
         batch.set(docRef, { ...lens, id: docRef.id });
       });
-      batch.commit().then(() => {
-        toast({ title: 'Append Successful', description: `${newLenses.length} new lens(es) were added.` });
-      }).catch(error => {
-        toast({ variant: 'destructive', title: 'Append Failed', description: error.message });
-      }).finally(() => setIsImporting(false));
+      batch.commit()
+        .then(() => toast({ title: 'Append Successful', description: `${newLenses.length} new lens(es) were added.` }))
+        .catch(error => toast({ variant: 'destructive', title: 'Append Failed', description: error.message }))
+        .finally(() => setIsImporting(false));
     } else {
       setIsImporting(false);
     }
@@ -149,13 +146,12 @@ export function DashboardPage() {
       return;
     }
     setIsImporting(true);
-    toast({ title: 'Replacing Database', description: 'Please wait, this may take a moment...' });
+    toast({ title: 'Replacing Database', description: 'Please wait...' });
     try {
       const existingDocs = await getDocs(productsCollection);
       const deleteBatch = writeBatch(firestore);
-      existingDocs.forEach(doc => deleteBatch.delete(doc.ref));
+      existingDocs.forEach(d => deleteBatch.delete(d.ref));
       await deleteBatch.commit();
-      toast({ title: 'Old Data Deleted', description: 'Now importing new data...' });
       const addBatch = writeBatch(firestore);
       lensesToImport.forEach(lens => {
         const docRef = doc(productsCollection);
@@ -174,14 +170,13 @@ export function DashboardPage() {
     if (!firestore || lensesToUpdate.length === 0) return;
     const batch = writeBatch(firestore);
     lensesToUpdate.forEach(({ updated }) => {
-      const docRef = doc(firestore, 'products', updated.id);
-      batch.set(docRef, updated);
+      batch.set(doc(firestore, 'products', updated.id), updated);
     });
     try {
       await batch.commit();
       toast({ title: 'Update Successful', description: `${lensesToUpdate.length} lens(es) were updated.` });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not update lenses in the database.' });
+      toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
     } finally {
       setLensesToUpdate([]);
       setUpdateConfirmOpen(false);
@@ -201,27 +196,26 @@ export function DashboardPage() {
       return a.localeCompare(b);
     };
 
-    const baseSensorSizes = (lenses || []).map(l => {
+    const baseSensorSizes = lenses.map(l => {
       const size = l.sensorSize || '';
-      const spaceIndex = size.indexOf(' ');
-      return spaceIndex !== -1 ? size.substring(0, spaceIndex) : size;
+      const idx = size.indexOf(' ');
+      return idx !== -1 ? size.substring(0, idx) : size;
     }).filter(Boolean);
 
-    const sensorNames = [...new Set((lenses || []).map(l => {
+    const sensorNames = [...new Set(lenses.map(l => {
       const size = l.sensorSize || '';
       const parts = size.split(' ');
       if (parts.length > 1 && parts[0].includes('"')) {
-        if (parts[1] && parts[1].toUpperCase() === 'ST' && parts.length > 2) return `${parts[1]} ${parts[2]}`;
+        if (parts[1]?.toUpperCase() === 'ST' && parts.length > 2) return `${parts[1]} ${parts[2]}`;
         return parts[1];
       }
       return null;
     }).filter(Boolean) as string[])].sort();
 
-    const uniqueSensorSizes = [...new Set(baseSensorSizes)];
-    const sortedSensorSizes = uniqueSensorSizes.sort(customSensorSort);
+    const sortedSensorSizes = [...new Set(baseSensorSizes)].sort(customSensorSort);
 
     const mountTypes = [...new Set(
-      (lenses || []).map(l => getMountPrefix(l.mountType)).filter((s): s is string => s !== null)
+      lenses.map(l => getMountPrefix(l.mountType)).filter((s): s is string => s !== null)
     )].sort((a, b) => {
       const aNum = parseFloat(a.replace(/^M/i, ''));
       const bNum = parseFloat(b.replace(/^M/i, ''));
@@ -236,33 +230,22 @@ export function DashboardPage() {
 
   const filteredLenses = useMemo(() => {
     const { searchQuery, sensorSize, mountType, efl, fNo, fovD, fovH, ttl, sortOrder, sensorName } = filters;
-    let processedLenses = [...(lenses || [])];
+    let result = [...lenses];
     if (sortOrder !== 'none') {
-      processedLenses.sort((a, b) => sortOrder === 'asc' ? naturalSort(a.name, b.name) : naturalSort(b.name, a.name));
+      result.sort((a, b) => sortOrder === 'asc' ? naturalSort(a.name, b.name) : naturalSort(b.name, a.name));
     }
-    return processedLenses.filter(lens => {
+    return result.filter(lens => {
       if (searchQuery && !lens.name?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (sensorSize !== 'all' && !lens.sensorSize?.startsWith(sensorSize)) return false;
       if (sensorName !== 'all' && !lens.sensorSize?.includes(sensorName)) return false;
-      if (mountType !== 'all') {
-        const prefix = getMountPrefix(lens.mountType);
-        if (prefix !== mountType) return false;
-      }
-      const eflVal = parseFloat(String(lens.efl));
-      if (efl[0] !== null && (isNaN(eflVal) || eflVal < efl[0])) return false;
-      if (efl[1] !== null && (isNaN(eflVal) || eflVal > efl[1])) return false;
-      const fNoVal = parseFloat(String(lens.fNo));
-      if (fNo[0] !== null && (isNaN(fNoVal) || fNoVal < fNo[0])) return false;
-      if (fNo[1] !== null && (isNaN(fNoVal) || fNoVal > fNo[1])) return false;
-      const fovDVal = parseFloat(String(lens.fovD));
-      if (fovD[0] !== null && (isNaN(fovDVal) || fovDVal < fovD[0])) return false;
-      if (fovD[1] !== null && (isNaN(fovDVal) || fovDVal > fovD[1])) return false;
-      const fovHVal = parseFloat(String(lens.fovH));
-      if (fovH[0] !== null && (isNaN(fovHVal) || fovHVal < fovH[0])) return false;
-      if (fovH[1] !== null && (isNaN(fovHVal) || fovHVal > fovH[1])) return false;
-      const ttlVal = parseFloat(String(lens.ttl));
-      if (ttl[0] !== null && (isNaN(ttlVal) || ttlVal < ttl[0])) return false;
-      if (ttl[1] !== null && (isNaN(ttlVal) || ttlVal > ttl[1])) return false;
+      if (mountType !== 'all' && getMountPrefix(lens.mountType) !== mountType) return false;
+      const check = (val: number, range: [number | null, number | null]) =>
+        (range[0] === null || val >= range[0]) && (range[1] === null || val <= range[1]);
+      if (!check(parseFloat(String(lens.efl)), efl)) return false;
+      if (!check(parseFloat(String(lens.fNo)), fNo)) return false;
+      if (!check(parseFloat(String(lens.fovD)), fovD)) return false;
+      if (!check(parseFloat(String(lens.fovH)), fovH)) return false;
+      if (!check(parseFloat(String(lens.ttl)), ttl)) return false;
       return true;
     });
   }, [filters, lenses]);
@@ -297,9 +280,6 @@ export function DashboardPage() {
           <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-left text-sm text-destructive">
             <p className="font-mono">{userError.message}</p>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            This is often caused by the app's domain not being authorized in your Firebase project's Authentication settings.
-          </p>
         </div>
       </div>
     );
@@ -321,7 +301,7 @@ export function DashboardPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <AppHeader
           searchQuery={filters.searchQuery}
-          onSearchChange={(query) => setFilters(prev => ({...prev, searchQuery: query}))}
+          onSearchChange={(query) => setFilters(prev => ({ ...prev, searchQuery: query }))}
         >
           {isSuperAdmin && <ErrorDashboardBadge onClick={() => setShowErrorDashboard(true)} />}
           <DataMenu onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} allLenses={lenses} />
@@ -333,9 +313,16 @@ export function DashboardPage() {
             onCompare={() => setCompareOpen(true)}
             onClear={() => setSelectedForCompare([])}
           />
-          <ProductList lenses={filteredLenses} isLoading={isLoading} onSelectLens={handleSelectLens} selectedForCompare={selectedForCompare} onToggleCompare={handleToggleCompare} />
+          <ProductList
+            lenses={filteredLenses}
+            isLoading={isLoading}
+            onSelectLens={handleSelectLens}
+            selectedForCompare={selectedForCompare}
+            onToggleCompare={handleToggleCompare}
+          />
         </main>
       </div>
+
       {selectedLens && (
         <ProductDetails
           lens={selectedLens}
