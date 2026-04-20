@@ -60,6 +60,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /error_log/{errorId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
+    }
+
     match /invites/{token} {
       allow read: if true;
       allow write: if isSignedIn();
