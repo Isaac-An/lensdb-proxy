@@ -1,33 +1,20 @@
-
-/**
- * @fileoverview Firestore Security Rules for Prototyping.
- *
- * Core Philosophy:
- * This ruleset adopts a public-read, owner-write model for the `products` collection and restricts access to the `excel_imports` collection, allowing only authenticated users to create new import records. No authorization checks are implemented to restrict `excel_imports` to the uploader.
- *
- * Data Structure:
- * - /products/{productId}: Stores product details. Publicly readable, but only authorized users can create, update, or delete.
- * - /excel_imports/{excelImportId}: Stores metadata about Excel imports. Only authenticated users can create new records.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Allows public read access to product details, but restricts write access to authenticated users.
-     * @path /products/{productId}
-     * @allow (get, list)
-     * @allow (create, update, delete) - only if the user is authenticated.
-     * @deny (create, update, delete) - if the user is not authenticated.
-     * @principle Enforces public read access with authenticated-user-only writes.
-     */
     match /products/{productId} {
       allow get: if true;
       allow list: if true;
-
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
+
+      match /notes/{noteId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn();
+      }
     }
 
     match /lenses/{lensId} {
@@ -44,19 +31,18 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isSignedIn();
+
+      match /notes/{noteId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update: if isSignedIn();
+        allow delete: if isSignedIn();
+      }
     }
 
-    /**
-     * @description Allows authenticated users to create new Excel import records.
-     * @path /excel_imports/{excelImportId}
-     * @allow (create) - only if the user is authenticated.
-     * @deny (get, list, update, delete)
-     * @principle Enforces authenticated-user-only creation for import records.
-     */
     match /excel_imports/{excelImportId} {
       allow get: if false;
       allow list: if false;
-
       allow create: if isSignedIn();
       allow update: if false;
       allow delete: if false;
@@ -72,7 +58,11 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
-    // Helper function to check if a user is signed in.
+    match /sync_conflicts/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }

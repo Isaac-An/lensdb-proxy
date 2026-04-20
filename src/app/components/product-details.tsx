@@ -5,7 +5,7 @@ import type { Lens } from '@/app/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Pencil, X, Save, Trash2, RefreshCw, Calculator, StickyNote } from 'lucide-react';
+import { FileText, Pencil, X, Save, Trash2, RefreshCw, Calculator, StickyNote, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFirebase } from '@/firebase';
 import { LensComparison } from './lens-comparison';
@@ -232,6 +232,8 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   const [noteInput, setNoteInput] = useState('');
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
   const [showSimilar, setShowSimilar] = useState(false);
   const [compareWith, setCompareWith] = useState<Lens | null>(null);
   const [similarBy, setSimilarBy] = useState<'sensor'|'efl'|'fov'|'imageCircle'>('sensor');
@@ -290,6 +292,22 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
     } finally {
       setIsSavingNote(false);
     }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!firestore || !lens?.id) return;
+    const { doc: fsDoc, deleteDoc: fsDeleteDoc } = await import('firebase/firestore');
+    await fsDeleteDoc(fsDoc(firestore, 'products', lens.id, 'notes', noteId));
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+  };
+
+  const handleSaveEdit = async (noteId: string) => {
+    if (!editingNoteText.trim() || !firestore || !lens?.id) return;
+    const { doc: fsDoc, updateDoc } = await import('firebase/firestore');
+    await updateDoc(fsDoc(firestore, 'products', lens.id, 'notes', noteId), { text: editingNoteText.trim() });
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, text: editingNoteText.trim() } : n));
+    setEditingNoteId(null);
+    setEditingNoteText('');
   };
 
   const similarLenses = useMemo(() => {
@@ -400,27 +418,63 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
           {showNotes && (
             <div className="w-64 shrink-0 overflow-y-auto p-6 flex flex-col gap-3" style={{ borderRight: '1px solid #e5e7eb', background: 'rgba(249,250,251,0.8)' }}>
               <p className="text-sm font-semibold" style={{ color: TEXT }}>Notes</p>
-              <div className="flex gap-2">
-                <Input
+              <div className="flex flex-col gap-2">
+                <textarea
                   placeholder="Add a note..."
                   value={noteInput}
                   onChange={e => setNoteInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddNote()}
-                  className="h-8 text-xs flex-1"
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddNote())}
+                  rows={3}
+                  className="w-full rounded-md text-xs p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300"
                   style={inputStyle}
                 />
-                <Button size="sm" onClick={handleAddNote} disabled={isSavingNote || !noteInput.trim()} style={btnStyle}>+</Button>
+                <Button size="sm" onClick={handleAddNote} disabled={isSavingNote || !noteInput.trim()} className="self-end" style={btnStyle}>
+                  {isSavingNote ? '...' : 'Add note'}
+                </Button>
               </div>
               {isLoadingNotes ? (
                 <p className="text-xs" style={{ color: TEXT_MUTED }}>Loading...</p>
               ) : notes.length === 0 ? (
-                <p className="text-xs" style={{ color: TEXT_MUTED }}>No notes yet. Press Enter to add.</p>
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>No notes yet.</p>
               ) : (
                 <div className="space-y-2">
                   {notes.map(n => (
-                    <div key={n.id} className="rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
-                      <p className="text-xs" style={{ color: TEXT }}>{n.text}</p>
-                      <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>{new Date(n.timestamp).toLocaleString()}</p>
+                    <div key={n.id} className="group rounded-lg p-2" style={{ background: 'white', border: '1px solid #e5e7eb' }}>
+                      {editingNoteId === n.id ? (
+                        <div className="flex flex-col gap-1">
+                          <textarea
+                            value={editingNoteText}
+                            onChange={e => setEditingNoteText(e.target.value)}
+                            rows={3}
+                            className="w-full rounded text-xs p-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300"
+                            style={inputStyle}
+                            autoFocus
+                          />
+                          <div className="flex gap-1 justify-end">
+                            <button onClick={() => { setEditingNoteId(null); setEditingNoteText(''); }} className="p-1 rounded hover:bg-gray-100">
+                              <X className="h-3 w-3" style={{ color: 'rgba(134,134,134,1)' }} />
+                            </button>
+                            <button onClick={() => handleSaveEdit(n.id)} className="p-1 rounded hover:bg-gray-100">
+                              <Check className="h-3 w-3" style={{ color: 'rgb(30,120,30)' }} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-xs flex-1" style={{ color: TEXT }}>{n.text}</p>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button onClick={() => { setEditingNoteId(n.id); setEditingNoteText(n.text); }} className="p-0.5 rounded hover:bg-gray-100">
+                                <Pencil className="h-3 w-3" style={{ color: 'rgba(134,134,134,1)' }} />
+                              </button>
+                              <button onClick={() => handleDeleteNote(n.id)} className="p-0.5 rounded hover:bg-red-50">
+                                <Trash2 className="h-3 w-3" style={{ color: 'rgba(200,50,50,0.8)' }} />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs mt-1" style={{ color: 'rgba(134,134,134,1)' }}>{new Date(n.timestamp).toLocaleString()}</p>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
