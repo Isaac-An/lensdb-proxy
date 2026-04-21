@@ -11,6 +11,7 @@ import { collection, query, orderBy, limit, startAfter, getDocs, getCountFromSer
 import { LensComparison } from '../lens-comparison';
 import { CompareBar } from '../compare-bar';
 import { useToast } from '@/hooks/use-toast';
+import { useRecentlyViewed } from '@/hooks/use-recently-viewed';
 import type { Lens } from '@/app/lib/types';
 
 export type SupplierFilters = {
@@ -62,17 +63,15 @@ function sanitizeSensorSize(val: any): string | null {
 function mountPrefix(val: string | null | undefined): string | null {
   if (!val) return null;
   const str = val.trim();
-  // Match M-series: extract just "M" + number prefix before any separator
-  // Handles: M12*0.5, M12*P0.5, M12x0.5, M12xP0.5, M4.00XP0.20
   const mMount = str.match(/^(M[\d\.]+)/i);
-  if (mMount) return mMount[1].replace(/\.0+$/, ''); // M4.00 → M4
-  // Keep named mounts as-is: C-Mount, CS-Mount, Board Type
+  if (mMount) return mMount[1].replace(/\.0+$/, '');
   return str;
 }
 
 export function SupplierDashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
   const { toast } = useToast();
+  const { addRecent } = useRecentlyViewed();
   const [filters, setFilters] = useState<SupplierFilters>(initialFilters);
   const [lenses, setLenses] = useState<SupplierLens[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,20 +91,15 @@ export function SupplierDashboardPage() {
   const filterOptions = useMemo(() => {
     if (allLenses.length === 0) return { mountTypes: [], suppliers: [], origins: [], sensorSizes: [] };
     const mountTypes = [...new Set(
-  allLenses.map(l => mountPrefix(l.mountType)).filter((s): s is string => s !== null)
-
-)].sort((a, b) => {
-  const aNum = parseFloat(a.replace(/^M/i, ''));
-  const bNum = parseFloat(b.replace(/^M/i, ''));
-  // Both M-series: sort numerically
-  if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-  // M-series before named mounts
-  if (!isNaN(aNum)) return -1;
-  if (!isNaN(bNum)) return 1;
-  // Both named: alphabetical
-  return a.localeCompare(b);
-});
-
+      allLenses.map(l => mountPrefix(l.mountType)).filter((s): s is string => s !== null)
+    )].sort((a, b) => {
+      const aNum = parseFloat(a.replace(/^M/i, ''));
+      const bNum = parseFloat(b.replace(/^M/i, ''));
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      if (!isNaN(aNum)) return -1;
+      if (!isNaN(bNum)) return 1;
+      return a.localeCompare(b);
+    });
     const suppliers = [...new Set(allLenses.map(l => l.supplier).filter(Boolean))].sort() as string[];
     const origins = [...new Set(allLenses.map(l => l.countryOfOrigin).filter(Boolean))].sort() as string[];
     const sensorSizes = [...new Set(
@@ -211,12 +205,10 @@ export function SupplierDashboardPage() {
     toast({ title: 'Replacing...', description: 'Deleting old data, please wait.' });
     try {
       const col = collection(firestore, 'supplier_lenses');
-      // Delete all existing
       const existing = await getDocs(col);
       const deleteBatch = writeBatch(firestore);
       existing.forEach(d => deleteBatch.delete(d.ref));
       await deleteBatch.commit();
-      // Write new in batches
       for (let i = 0; i < lensesToImport.length; i += 500) {
         const batch = writeBatch(firestore);
         lensesToImport.slice(i, i + 500).forEach(lens => {
@@ -240,16 +232,10 @@ export function SupplierDashboardPage() {
     const { searchQuery, efl, fNo, fovD, fovH, ttl, imageCircle, sensorSize, origin, mountType, supplier } = filters;
     return !!(
       searchQuery ||
-      sensorSize !== 'all' ||
-      origin !== 'all' ||
-      mountType !== 'all' ||
-      supplier !== 'all' ||
-      efl[0] !== null || efl[1] !== null ||
-      fNo[0] !== null || fNo[1] !== null ||
-      fovD[0] !== null || fovD[1] !== null ||
-      fovH[0] !== null || fovH[1] !== null ||
-      ttl[0] !== null || ttl[1] !== null ||
-      imageCircle[0] !== null || imageCircle[1] !== null
+      sensorSize !== 'all' || origin !== 'all' || mountType !== 'all' || supplier !== 'all' ||
+      efl[0] !== null || efl[1] !== null || fNo[0] !== null || fNo[1] !== null ||
+      fovD[0] !== null || fovD[1] !== null || fovH[0] !== null || fovH[1] !== null ||
+      ttl[0] !== null || ttl[1] !== null || imageCircle[0] !== null || imageCircle[1] !== null
     );
   }, [filters]);
 
@@ -272,7 +258,6 @@ export function SupplierDashboardPage() {
     const source = needsAllLenses ? allLenses : lenses;
     let result = [...source];
     const { searchQuery, efl, fNo, fovD, fovH, ttl, imageCircle, sensorSize, origin, mountType, supplier } = filters;
-
     if (searchQuery) result = result.filter(l => l.name?.toLowerCase().includes(searchQuery.toLowerCase()));
     if (supplier !== 'all') result = result.filter(l => l.supplier === supplier);
     if (origin === 'non-china') {
@@ -280,12 +265,8 @@ export function SupplierDashboardPage() {
     } else if (origin !== 'all') {
       result = result.filter(l => l.countryOfOrigin === origin);
     }
-    if (mountType !== 'all') {
-      result = result.filter(l => mountPrefix(l.mountType) === mountType);
-    }
-    if (sensorSize !== 'all') {
-      result = result.filter(l => sanitizeSensorSize(l.sensorSize) === sensorSize);
-    }
+    if (mountType !== 'all') result = result.filter(l => mountPrefix(l.mountType) === mountType);
+    if (sensorSize !== 'all') result = result.filter(l => sanitizeSensorSize(l.sensorSize) === sensorSize);
     if (efl[0] !== null) result = result.filter(l => { const v = parseNum(l.efl); return v !== null && v >= efl[0]!; });
     if (efl[1] !== null) result = result.filter(l => { const v = parseNum(l.efl); return v !== null && v <= efl[1]!; });
     if (fNo[0] !== null) result = result.filter(l => { const v = parseNum(l.fNo); return v !== null && v >= fNo[0]!; });
@@ -298,7 +279,6 @@ export function SupplierDashboardPage() {
     if (ttl[1] !== null) result = result.filter(l => { const v = parseNum(l.ttl); return v !== null && v <= ttl[1]!; });
     if (imageCircle[0] !== null) result = result.filter(l => { const v = parseNum(l.maxImageCircle); return v !== null && v >= imageCircle[0]!; });
     if (imageCircle[1] !== null) result = result.filter(l => { const v = parseNum(l.maxImageCircle); return v !== null && v <= imageCircle[1]!; });
-
     return result;
   }, [lenses, allLenses, needsAllLenses, filters]);
 
@@ -311,8 +291,14 @@ export function SupplierDashboardPage() {
   };
 
   const handleSelectLens = (lens: SupplierLens) => {
+    addRecent({ id: lens.id, name: lens.name, supplier: lens.supplier, sensorSize: lens.sensorSize, source: 'supplier_lenses' });
     setSelectedLens(lens);
     setDetailsOpen(true);
+  };
+
+  const handleSelectRecentLens = (id: string) => {
+    const lens = allLenses.find(l => l.id === id) || lenses.find(l => l.id === id);
+    if (lens) handleSelectLens(lens);
   };
 
   if (userError && process.env.NODE_ENV === 'production') {
@@ -346,6 +332,7 @@ export function SupplierDashboardPage() {
         <SupplierHeader
           searchQuery={filters.searchQuery}
           onSearchChange={q => setFilters(prev => ({ ...prev, searchQuery: q }))}
+          onSelectRecentLens={handleSelectRecentLens}
         >
           <SupplierExcelImport
             onAppend={handleAppend}

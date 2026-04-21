@@ -17,12 +17,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { RecentlyViewedButton } from './recently-viewed-button';
 
 type SupplierHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   children?: React.ReactNode;
   onImportComplete?: () => void;
+  onSelectRecentLens?: (id: string, source: 'products' | 'supplier_lenses') => void;
 };
 
 const normalizeHeader = (header: string) =>
@@ -57,6 +59,7 @@ export function SupplierHeader({
   onSearchChange,
   children,
   onImportComplete,
+  onSelectRecentLens,
 }: SupplierHeaderProps) {
   const { firestore } = useFirebase();
   const { toast } = useToast();
@@ -220,6 +223,7 @@ export function SupplierHeader({
         />
 
         {children}
+        {onSelectRecentLens && <RecentlyViewedButton onSelectLens={onSelectRecentLens} />}
       </div>
 
       <AlertDialog open={isConfirmOpen} onOpenChange={setConfirmOpen}>

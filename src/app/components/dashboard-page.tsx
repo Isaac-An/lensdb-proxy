@@ -16,6 +16,7 @@ import { UpdateConfirmationDialog } from './update-confirmation-dialog';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { LensComparison } from './lens-comparison';
 import { CompareBar } from './compare-bar';
+import { useRecentlyViewed } from '@/hooks/use-recently-viewed';
 import dynamic from 'next/dynamic';
 
 const ErrorDashboard = dynamic(() => import('./error-dashboard').then(m => m.ErrorDashboard), { ssr: false });
@@ -81,6 +82,7 @@ function getMountPrefix(mountType: string | null | undefined): string | null {
 export function DashboardPage() {
   const { firestore, isUserLoading, userError } = useFirebase();
   const { isAdmin, isSuperAdmin } = useIsAdmin();
+  const { addRecent } = useRecentlyViewed();
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'products') : null, [firestore]);
   const { data: rawLenses, isLoading: isLoadingLenses } = useCollection<Lens>(productsCollection);
   const lenses: Lens[] = (rawLenses ?? []) as Lens[];
@@ -259,13 +261,16 @@ export function DashboardPage() {
   };
 
   const handleSelectLens = (lens: Lens) => {
+    addRecent({ id: lens.id, name: lens.name, sensorSize: lens.sensorSize, source: 'products' });
     if (lens.extractionStatus === 'needs_split_review') {
-      setSplitLens(lens);
-      setSplitOpen(true);
-      return;
+      setSplitLens(lens); setSplitOpen(true); return;
     }
-    setSelectedLens(lens);
-    setDetailsOpen(true);
+    setSelectedLens(lens); setDetailsOpen(true);
+  };
+
+  const handleSelectRecentLens = (id: string) => {
+    const lens = lenses.find(l => l.id === id);
+    if (lens) handleSelectLens(lens);
   };
 
   const isLoading = isLoadingLenses || isImporting || isUserLoading;
@@ -302,6 +307,7 @@ export function DashboardPage() {
         <AppHeader
           searchQuery={filters.searchQuery}
           onSearchChange={(query) => setFilters(prev => ({ ...prev, searchQuery: query }))}
+          onSelectRecentLens={handleSelectRecentLens}
         >
           {isSuperAdmin && <ErrorDashboardBadge onClick={() => setShowErrorDashboard(true)} />}
           <DataMenu onAppend={handleAppend} onReplace={handleReplace} isDisabled={isButtonDisabled} allLenses={lenses} />
@@ -322,7 +328,6 @@ export function DashboardPage() {
           />
         </main>
       </div>
-
       {selectedLens && (
         <ProductDetails
           lens={selectedLens}

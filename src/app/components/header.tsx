@@ -8,15 +8,20 @@ import { signOut } from 'firebase/auth';
 import { useIsAdmin } from '@/hooks/use-is-admin';
 import { InviteButton } from './invite-button';
 import { Badge } from '@/components/ui/badge';
+import { RecentlyViewedButton } from './recently-viewed-button';
+
 type AppHeaderProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   children?: React.ReactNode;
+  onSelectRecentLens?: (id: string, source: 'products' | 'supplier_lenses') => void;
 };
-export function AppHeader({ searchQuery, onSearchChange, children }: AppHeaderProps) {
+
+export function AppHeader({ searchQuery, onSearchChange, children, onSelectRecentLens }: AppHeaderProps) {
   const { auth, user } = useFirebase();
   const { isAdmin } = useIsAdmin();
   const handleSignOut = () => signOut(auth);
+
   return (
     <header className='sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6'>
       <div className='flex items-center gap-4'>
@@ -33,6 +38,7 @@ export function AppHeader({ searchQuery, onSearchChange, children }: AppHeaderPr
         {isAdmin && <Badge variant='secondary' className='gap-1'><ShieldCheck className='h-3 w-3' />Admin</Badge>}
         <InviteButton />
         {children}
+        {onSelectRecentLens && <RecentlyViewedButton onSelectLens={onSelectRecentLens} />}
         <Button variant='ghost' size='sm' onClick={handleSignOut} title={'Sign out ' + (user?.email || '')}>
           <LogOut className='h-4 w-4' />
         </Button>
