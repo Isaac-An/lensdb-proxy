@@ -137,7 +137,7 @@ export function ErrorDashboardBadge({ onClick }: { onClick: () => void }) {
     )).then(snap => setCount(snap.size)).catch(() => {});
   }, [firestore, isSuperAdmin]);
 
-  if (!isSuperAdmin || count === 0) return null;
+  if (!isSuperAdmin) return null;
 
   return (
     <button
@@ -146,7 +146,7 @@ export function ErrorDashboardBadge({ onClick }: { onClick: () => void }) {
       style={{ border: '1px solid rgba(200,50,50,0.3)', color: 'rgb(180,50,50)', background: 'rgba(255,80,80,0.08)' }}
     >
       <AlertTriangle className="h-3.5 w-3.5" />
-      {count} error{count !== 1 ? 's' : ''}
+      {count > 0 ? `${count} error${count !== 1 ? 's' : ''}` : 'Errors'}
     </button>
   );
 }
