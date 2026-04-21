@@ -3,8 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useFirebase } from '@/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { useIsAdmin } from '@/hooks/use-is-admin';
-// and change:
-const { isSuperAdmin } = useIsAdmin();
+
 import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +29,7 @@ type FailedLens = {
 
 export function ErrorDashboard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { firestore } = useFirebase();
-  const { isSuperAdmin } = useIsSuperAdmin();
+  const { isSuperAdmin } = useIsAdmin();
   const [failedLenses, setFailedLenses] = useState<FailedLens[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -126,7 +125,7 @@ export function ErrorDashboard({ open, onClose }: { open: boolean; onClose: () =
 
 export function ErrorDashboardBadge({ onClick }: { onClick: () => void }) {
   const { firestore } = useFirebase();
-  const { isSuperAdmin } = useIsSuperAdmin();
+  const { isSuperAdmin } = useIsAdmin();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
