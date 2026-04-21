@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { RecentlyViewedButton } from './recently-viewed-button';
+import { RecentlyViewedButton } from '../recently-viewed-button';
 
 type SupplierHeaderProps = {
   searchQuery: string;
