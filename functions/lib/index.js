@@ -73,7 +73,7 @@ function pickRelevantText(pdfText, maxLen) {
     return (chunks.length > 0 ? [...new Set(chunks)].join("\n\n") : text).slice(0, maxLen);
 }
 exports.onLensPdfUploaded = (0, storage_1.onObjectFinalized)({ bucket: EXPECTED_BUCKET, secrets: ["GEMINI_API_KEY"] }, async (event) => {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     initAdmin();
     const filePath = event.data.name || "";
     const bucket = event.data.bucket;
@@ -146,6 +146,7 @@ ${relevantText}`;
             // Write staging doc for review
             await docRef.set({
                 id: safeId,
+                name: ((_f = lensArray[0]) === null || _f === void 0 ? void 0 : _f.name) || safeId,
                 pdfUrl,
                 sourcePath: filePath,
                 extractionStatus: "needs_split_review",

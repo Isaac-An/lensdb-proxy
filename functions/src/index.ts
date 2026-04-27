@@ -148,15 +148,16 @@ ${relevantText}`;
       if (lensArray.length > 1) {
         // Write staging doc for review
         await docRef.set({
-          id: safeId,
-          pdfUrl,
-          sourcePath: filePath,
-          extractionStatus: "needs_split_review",
-          stagedLenses: lensArray,
-          updatedAt: new Date(),
-          createdAt: new Date(),
-          debug_pdfText_sample: fullText.slice(0, 500),
-          debug_aiRaw: rawText.slice(0, 1000),
+        id: safeId,
+        name: lensArray[0]?.name || safeId,
+        pdfUrl,
+        sourcePath: filePath,
+        extractionStatus: "needs_split_review",
+        stagedLenses: lensArray,
+        updatedAt: new Date(),
+        createdAt: new Date(),
+        debug_pdfText_sample: fullText.slice(0, 500),
+        debug_aiRaw: rawText.slice(0, 1000),
         }, { merge: true });
         logger.info("Multi-sensor PDF staged for review", { filePath, count: lensArray.length });
       } else {
