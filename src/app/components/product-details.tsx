@@ -268,16 +268,16 @@ export function ProductDetails({ lens, open, onOpenChange, isAdmin = false }: Pr
   }, [showSimilar, firestore]);
 
   useEffect(() => {
-    if (!showNotes || !firestore || !lens?.id) return;
-    setIsLoadingNotes(true);
-    getDocs(collection(firestore, 'products', lens.id, 'notes'))
-      .then(snap => {
-        const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as Note));
-        loaded.sort((a, b) => b.timestamp - a.timestamp);
-        setNotes(loaded);
-      })
-      .finally(() => setIsLoadingNotes(false));
-  }, [showNotes, lens?.id, firestore]);
+  if (!firestore || !lens?.id) return;
+  setIsLoadingNotes(true);
+  getDocs(collection(firestore, 'products', lens.id, 'notes'))
+    .then(snap => {
+      const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as Note));
+      loaded.sort((a, b) => b.timestamp - a.timestamp);
+      setNotes(loaded);
+    })
+    .finally(() => setIsLoadingNotes(false));
+}, [lens?.id, firestore]);
 
   useEffect(() => {
     if (!showHistory || !firestore || !lens?.id) return;
