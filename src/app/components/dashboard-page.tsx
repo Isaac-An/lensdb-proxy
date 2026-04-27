@@ -19,7 +19,9 @@ import { CompareBar } from './compare-bar';
 import { useRecentlyViewed } from '@/hooks/use-recently-viewed';
 import dynamic from 'next/dynamic';
 
-const ErrorDashboard = dynamic(() => import('./error-dashboard').then(m => m.ErrorDashboard), { ssr: false });
+const ErrorDashboard = dynamic<{ open: boolean; onClose: () => void; onReviewSplit?: (id: string) => void }>(
+  () => import('./error-dashboard').then(m => m.ErrorDashboard), { ssr: false }
+);
 const ErrorDashboardBadge = dynamic(() => import('./error-dashboard').then(m => m.ErrorDashboardBadge), { ssr: false });
 
 export type Filters = {
@@ -356,7 +358,15 @@ export function DashboardPage() {
           onOpenChange={setCompareOpen}
         />
       )}
-      <ErrorDashboard open={showErrorDashboard} onClose={() => setShowErrorDashboard(false)} />
+      <ErrorDashboard
+  open={showErrorDashboard}
+  onClose={() => setShowErrorDashboard(false)}
+  onReviewSplit={(id) => {
+    const lens = lenses.find(l => l.id === id);
+    if (lens) handleSelectLens(lens);
+    setShowErrorDashboard(false);
+  }}
+/>
     </div>
   );
 }

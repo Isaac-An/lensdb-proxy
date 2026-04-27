@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useFirebase } from '@/firebase';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { useIsAdmin } from '@/hooks/use-is-admin';
-import { AlertTriangle, RefreshCw, X, Bot, GitFork } from 'lucide-react';
+import { AlertTriangle, RefreshCw, X, Bot, GitFork, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -22,7 +22,13 @@ type SplitLens = {
   stagedLenses?: any[];
 };
 
-export function ErrorDashboard({ open, onClose }: { open: boolean; onClose: () => void }) {
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  onReviewSplit?: (lensId: string) => void;
+};
+
+export function ErrorDashboard({ open, onClose, onReviewSplit }: Props) {
   const { firestore } = useFirebase();
   const { isSuperAdmin } = useIsAdmin();
   const [failedLenses, setFailedLenses] = useState<FailedLens[]>([]);
@@ -63,7 +69,7 @@ export function ErrorDashboard({ open, onClose }: { open: boolean; onClose: () =
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
             <div className="flex items-center gap-3">
-              <Bot className="h-5 w-5 text-purple-500" />
+              <Bot className="h-5 w-5" style={{ color: 'rgba(76,76,76,0.7)' }} />
               <h2 className="text-lg font-semibold">AI Dashboard</h2>
               {totalIssues > 0 && <Badge variant="destructive">{totalIssues} issue{totalIssues !== 1 ? 's' : ''}</Badge>}
             </div>
@@ -100,14 +106,14 @@ export function ErrorDashboard({ open, onClose }: { open: boolean; onClose: () =
               onClick={() => setTab('split')}
               className="flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors"
               style={{
-                borderBottomColor: tab === 'split' ? 'rgb(124,58,237)' : 'transparent',
-                color: tab === 'split' ? 'rgb(124,58,237)' : 'rgba(76,76,76,0.6)',
+                borderBottomColor: tab === 'split' ? 'rgb(59,130,246)' : 'transparent',
+                color: tab === 'split' ? 'rgb(59,130,246)' : 'rgba(76,76,76,0.6)',
               }}
             >
               <GitFork className="h-3.5 w-3.5" />
               Pending Split Review
               {splitLenses.length > 0 && (
-                <span className="rounded-full px-1.5 py-0.5 text-xs" style={{ background: 'rgba(124,58,237,0.1)', color: 'rgb(124,58,237)' }}>
+                <span className="rounded-full px-1.5 py-0.5 text-xs" style={{ background: 'rgba(59,130,246,0.1)', color: 'rgb(59,130,246)' }}>
                   {splitLenses.length}
                 </span>
               )}
@@ -153,22 +159,31 @@ export function ErrorDashboard({ open, onClose }: { open: boolean; onClose: () =
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {splitLenses.length} lens{splitLenses.length !== 1 ? 'es' : ''} need split review. Click the card in the main view to review.
-                  </p>
                   {splitLenses.map(lens => (
-                    <div key={lens.id} className="rounded-xl p-4 border border-purple-100 bg-purple-50">
+                    <div key={lens.id} className="rounded-xl p-4 border border-blue-100 bg-blue-50">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-purple-900 truncate">{lens.name || lens.id}</p>
-                          {lens.sourcePath && <p className="text-xs text-purple-600 mt-0.5 truncate">{lens.sourcePath}</p>}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-blue-900 truncate">{lens.name || lens.id}</p>
+                          {lens.sourcePath && <p className="text-xs text-blue-600 mt-0.5 truncate">{lens.sourcePath}</p>}
                           {lens.stagedLenses && (
-                            <p className="text-xs text-purple-700 mt-1">{lens.stagedLenses.length} sensor variants detected</p>
+                            <p className="text-xs text-blue-700 mt-1">{lens.stagedLenses.length} sensor variants detected</p>
                           )}
                         </div>
-                        <Badge className="shrink-0 text-xs" style={{ background: 'rgba(124,58,237,0.15)', color: 'rgb(124,58,237)', border: '1px solid rgba(124,58,237,0.3)' }}>
-                          Needs Review
-                        </Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge className="text-xs" style={{ background: 'rgba(59,130,246,0.15)', color: 'rgb(59,130,246)', border: '1px solid rgba(59,130,246,0.3)' }}>
+                            Needs Review
+                          </Badge>
+                          {onReviewSplit && (
+                            <Button
+                              size="sm"
+                              onClick={() => { onReviewSplit(lens.id); onClose(); }}
+                              style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.4)', color: 'rgb(37,99,235)' }}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Review
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -202,9 +217,9 @@ export function ErrorDashboardBadge({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
       style={{
-        border: count > 0 ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(134,134,134,0.3)',
-        color: count > 0 ? 'rgb(220,38,38)' : 'rgba(76,76,76,0.7)',
-        background: count > 0 ? 'rgba(239,68,68,0.08)' : 'transparent',
+        border: count > 0 ? '1px solid rgba(234,179,8,0.5)' : '1px solid rgba(134,134,134,0.25)',
+        color: count > 0 ? 'rgb(161,122,0)' : 'rgba(76,76,76,0.6)',
+        background: count > 0 ? 'rgba(234,179,8,0.08)' : 'transparent',
       }}
     >
       <Bot className="h-3.5 w-3.5" />
